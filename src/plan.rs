@@ -343,10 +343,10 @@ impl DesignPlan {
                 1
             )
         ));
-        steps.push("Kanten abrunden: umlaufend etwa {:.1} mm, danach die \
-                    Vorderkante anschrägen."
-            .replace("{:.1}", &format!("{:.1}", p.edge_break_mm))
-            .to_string());
+        steps.push(format!(
+            "Kanten abrunden: umlaufend etwa {}, danach die Vorderkante anschrägen.",
+            de_mm(p.edge_break_mm, 1)
+        ));
         steps.push("Leimfugen vorbereiten: an der Angel und im Holz entfetten, \
                     Passprobe ohne Klebstoff."
             .to_string());

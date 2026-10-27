@@ -131,23 +131,23 @@ pub static MATERIALS: &[Material] = &[
         density: 0.66, janka: Some(1010.0), hard: "mittel",
         grain: "geradelfasrig, feine Poren", oil: 0.55, stab: 0.75,
         crack: 0.25, work: 0.85,
-        figure: "Warme braune Grundfarbe, oft roetlich bis violett, unregelmaessige Maserung",
+        figure: "Warme braune Grundfarbe, oft rötlich bis violett, unregelmäßige Maserung",
         adh: &["Zwei-Komponenten-Epoxy", "Kunstharzleim PUR"],
-        fin: &["Hartwachs-Oel", "Leinoel + Bienenwachs", "Harte Oel"],
+        fin: &["Hartwachs-Öl", "Leinöl + Bienenwachs", "Harte Öl"],
         fast: "Messing-Stift",
-        notes: "Der Klassiker. Feine Poren, nimmt Oel gut auf, dunkelt mit der Zeit nach. Spannungsrisiko bei duennen Schalen nur gering.",
+        notes: "Der Klassiker. Feine Poren, nimmt Öl gut auf, dunkelt mit der Zeit nach. Spannungsrisiko bei dünnen Schalen nur gering.",
         price: 2, good: &["full_tang", "partial_tang"]
     },
     mat! {
         key: "eiche", name: "Eiche", cat: C::Wood,
         density: 0.75, janka: Some(1360.0), hard: "hart",
-        grain: "porig, starke Fruehholzporen", oil: 0.8, stab: 0.9,
+        grain: "porig, starke Frühholzporen", oil: 0.8, stab: 0.9,
         crack: 0.2, work: 0.7,
         figure: "Deutliche Ringporen, markante Zeichnung, fleckige Durchzeichnung",
         adh: &["Zwei-Komponenten-Epoxy", "Kunstharzleim PUR"],
-        fin: &["Hartwachs-Oel", "Laugenbeize + Oel", "Brennlack"],
+        fin: &["Hartwachs-Öl", "Laugenbeize + Öl", "Brennlack"],
         fast: "Messing-Stift",
-        notes: "Extrem formstabil, porig. Saugt Oel stark -> zweimalige Oelung noetig. Fuer kraeftige Optik ideal, die grossen Poren bleiben sichtbar.",
+        notes: "Extrem formstabil, porig. Saugt Öl stark -> zweimalige Ölung nötig. Für kräftige Optik ideal, die großen Poren bleiben sichtbar.",
         price: 1, good: &["full_tang", "one_piece", "ferrule"]
     },
     mat! {
@@ -155,23 +155,23 @@ pub static MATERIALS: &[Material] = &[
         density: 0.69, janka: Some(1320.0), hard: "hart",
         grain: "geradelfasrig, ringporig", oil: 0.55, stab: 0.7,
         crack: 0.3, work: 0.8,
-        figure: "Helle Grundfarbe mit kraeftiger Streifenzeichnung, elastig",
+        figure: "Helle Grundfarbe mit kräftiger Streifenzeichnung, elastig",
         adh: &["Zwei-Komponenten-Epoxy", "Kunstharzleim PUR"],
-        fin: &["Hartwachs-Oel", "Beize + Oel"],
+        fin: &["Hartwachs-Öl", "Beize + Öl"],
         fast: "Messing-Stift",
-        notes: "Etwas elastig -> leichtes Durchbiegen im Griff, bei Full Tang sogar erwuenscht (Daempfung). Guter Allrounder.",
+        notes: "Etwas elastig -> leichtes Durchbiegen im Griff, bei Full Tang sogar erwünscht (Dämpfung). Guter Allrounder.",
         price: 1, good: &["full_tang"]
     },
     mat! {
         key: "ahorn", name: "Ahorn (Hartholz)", cat: C::Wood,
         density: 0.72, janka: Some(1450.0), hard: "hart",
-        grain: "fein, gleichmaessig, geschlossen", oil: 0.4, stab: 0.8,
+        grain: "fein, gleichmäßig, geschlossen", oil: 0.4, stab: 0.8,
         crack: 0.25, work: 0.8,
-        figure: "Cremeweiss bis hellgrau, feine Quaste oder Augen-Maserung",
+        figure: "Cremeweiß bis hellgrau, feine Quaste oder Augen-Maserung",
         adh: &["Zwei-Komponenten-Epoxy"],
-        fin: &["Hartwachs-Oel", "Beize + Oel"],
+        fin: &["Hartwachs-Öl", "Beize + Öl"],
         fast: "Messing-Stift",
-        notes: "Sehr hart und dimensionstreu, nimmt Oel wenig an -> Schalen bleiben hell. Spannungsgarnitur empfohlen.",
+        notes: "Sehr hart und dimensionstreu, nimmt Öl wenig an -> Schalen bleiben hell. Spannungsgarnitur empfohlen.",
         price: 2, good: &["full_tang", "partial_tang"]
     },
     mat! {
@@ -181,9 +181,9 @@ pub static MATERIALS: &[Material] = &[
         crack: 0.4, work: 0.9,
         figure: "Warmes Honigbraun, feine Flammen- und Flickzeichnung",
         adh: &["Zwei-Komponenten-Epoxy", "Kunstharzleim PUR"],
-        fin: &["Hartwachs-Oel"],
+        fin: &["Hartwachs-Öl"],
         fast: "Messing-Stift",
-        notes: "Sehr gut zu bearbeiten, dunkelt mit der Zeit kraeftig nach. Weicher -> groessere Wandstaerke und grosszuegige Bohrungen einplanen.",
+        notes: "Sehr gut zu bearbeiten, dunkelt mit der Zeit kräftig nach. Weicher -> größere Wandstärke und großzügige Bohrungen einplanen.",
         price: 2, good: &["full_tang", "one_piece"]
     },
     mat! {
@@ -191,11 +191,11 @@ pub static MATERIALS: &[Material] = &[
         density: 0.60, janka: Some(980.0), hard: "mittel",
         grain: "fein, verschlossen", oil: 0.5, stab: 0.6,
         crack: 0.35, work: 0.85,
-        figure: "Cremeweiss mit feiner Laengszeichnung, Birkenruebe",
+        figure: "Cremeweiß mit feiner Längszeichnung, Birkenrübe",
         adh: &["Zwei-Komponenten-Epoxy"],
-        fin: &["Hartwachs-Oel"],
+        fin: &["Hartwachs-Öl"],
         fast: "Messing-Stift",
-        notes: "Guenstig, gut zu drechseln, haelt Stifte gut. Wird schnell fleckig.",
+        notes: "Günstig, gut zu drechseln, hält Stifte gut. Wird schnell fleckig.",
         price: 1, good: &["full_tang", "one_piece"]
     },
     mat! {
@@ -203,11 +203,11 @@ pub static MATERIALS: &[Material] = &[
         density: 1.15, janka: Some(3220.0), hard: "sehr hart",
         grain: "sehr fein, dicht, geschlossen", oil: 0.15, stab: 0.9,
         crack: 0.35, work: 0.4,
-        figure: "Tiefschwarz bis dunkelbraun, feine helle Linien bei bester Qualitaet",
+        figure: "Tiefschwarz bis dunkelbraun, feine helle Linien bei bester Qualität",
         adh: &["Zwei-Komponenten-Epoxy"],
-        fin: &["Politur", "Hartwachs-Oel (wenig)"],
+        fin: &["Politur", "Hartwachs-Öl (wenig)"],
         fast: "Messing-Stift",
-        notes: "Sehr hart und schwer, nimmt kaum Oel auf -> dunkel glaenzend polieren. Sproed bei Biegebelastung: Bohrlocher grosszuegig bohren, Faserrichtung beachten.",
+        notes: "Sehr hart und schwer, nimmt kaum Öl auf -> dunkel glänzend polieren. Spröd bei Biegebelastung: Bohrlocher großzügig bohren, Faserrichtung beachten.",
         price: 5, good: &["full_tang"]
     },
     mat! {
@@ -217,7 +217,7 @@ pub static MATERIALS: &[Material] = &[
         crack: 0.3, work: 0.55,
         figure: "Tiefbraun bis violett-schwarz, dunkle Adern, hoher Kontrast",
         adh: &["Zwei-Komponenten-Epoxy"],
-        fin: &["Hartwachs-Oel", "Politur"],
+        fin: &["Hartwachs-Öl", "Politur"],
         fast: "Messing-Stift",
         notes: "Olig, daher nur wenig Leimverlust und hohe Klebestigkeit. Sehr formstabil, dunkelt kaum nach. Breite Adern als Kontrastelement nutzbar.",
         price: 5, good: &["full_tang", "partial_tang", "one_piece"]
@@ -229,21 +229,21 @@ pub static MATERIALS: &[Material] = &[
         crack: 0.45, work: 0.5,
         figure: "Tiefschwarz mit feinen helleren Faserlinien",
         adh: &["Zwei-Komponenten-Epoxy"],
-        fin: &["Hartwachs-Oel", "Politur"],
+        fin: &["Hartwachs-Öl", "Politur"],
         fast: "Messing-Stift",
-        notes: "Sproede, daher nur fuer erfahrene Macher. Rissgefahr bei Zu- und Abkuehlung in der Werkstatt.",
+        notes: "Spröde, daher nur für erfahrene Macher. Rissgefahr bei Zu- und Abkühlung in der Werkstatt.",
         price: 4, good: &["full_tang"]
     },
     mat! {
         key: "olivenholz", name: "Olivenholz", cat: C::Wood,
         density: 0.92, janka: Some(1900.0), hard: "sehr hart",
-        grain: "unregelmaessig, wild wachsend", oil: 0.45, stab: 0.8,
+        grain: "unregelmäßig, wild wachsend", oil: 0.45, stab: 0.8,
         crack: 0.5, work: 0.45,
         figure: "Stark kontrastierend, hell-gelb und dunkel-braun gestreift",
         adh: &["Zwei-Komponenten-Epoxy"],
-        fin: &["Hartwachs-Oel", "Oel + Bienenwachs"],
+        fin: &["Hartwachs-Öl", "Öl + Bienenwachs"],
         fast: "Messing-Stift",
-        notes: "Unregelmaessige Struktur macht die Bohrungstoleranzen unberechenbar - Loecher immer mit Gegenprobe bohren. Sehr dekorativ.",
+        notes: "Unregelmäßige Struktur macht die Bohrungstoleranzen unberechenbar - Löcher immer mit Gegenprobe bohren. Sehr dekorativ.",
         price: 4, good: &["full_tang", "one_piece"]
     },
     mat! {
@@ -251,11 +251,11 @@ pub static MATERIALS: &[Material] = &[
         density: 0.85, janka: Some(1800.0), hard: "sehr hart",
         grain: "fein, homogen, geschlossen", oil: 0.35, stab: 0.8,
         crack: 0.3, work: 0.65,
-        figure: "Creme bis honigfarben, feine roetliche Adern",
+        figure: "Creme bis honigfarben, feine rötliche Adern",
         adh: &["Zwei-Komponenten-Epoxy"],
-        fin: &["Hartwachs-Oel", "Politur"],
+        fin: &["Hartwachs-Öl", "Politur"],
         fast: "Messing-Stift",
-        notes: "Feinste Zeichnung, sehr teuer. Klassiker fuer edle Full-Tang-Messer.",
+        notes: "Feinste Zeichnung, sehr teuer. Klassiker für edle Full-Tang-Messer.",
         price: 5, good: &["full_tang"]
     },
     mat! {
@@ -265,21 +265,21 @@ pub static MATERIALS: &[Material] = &[
         crack: 0.4, work: 0.6,
         figure: "Hochkontrastige Zebra-Streifen, hell-braun und dunkel-braun",
         adh: &["Zwei-Komponenten-Epoxy"],
-        fin: &["Hartwachs-Oel"],
+        fin: &["Hartwachs-Öl"],
         fast: "Messing-Stift",
-        notes: "Maserung ist extrem auffaellig - Schalen spiegelbildlich ausrichten, sonst wirkt der Griff unruhig.",
+        notes: "Maserung ist extrem auffällig - Schalen spiegelbildlich ausrichten, sonst wirkt der Griff unruhig.",
         price: 4, good: &["full_tang"]
     },
     mat! {
-        key: "thuja", name: "Thuja / Laerche (Knochenholz)", cat: C::Wood,
+        key: "thuja", name: "Thuja / Lärche (Knochenholz)", cat: C::Wood,
         density: 0.39, janka: Some(400.0), hard: "weich",
         grain: "sehr weich, langfaserig", oil: 0.7, stab: 0.6,
         crack: 0.35, work: 0.95,
-        figure: "Cremeweiss mit kraeftiger, dunkler Laengsaderung",
+        figure: "Cremeweiß mit kräftiger, dunkler Längsaderung",
         adh: &["Zwei-Komponenten-Epoxy", "Kunstharzleim PUR"],
-        fin: &["Hartwachs-Oel", "Oel + Bienenwachs"],
+        fin: &["Hartwachs-Öl", "Öl + Bienenwachs"],
         fast: "Messing-Stift",
-        notes: "Extrem leicht, sehr elastisch, ideal fuer verdeckten Tang und Faltmesser. Grosse Bohrungen noetig, Stifte nicht zu fest.",
+        notes: "Extrem leicht, sehr elastisch, ideal für verdeckten Tang und Faltmesser. Große Bohrungen nötig, Stifte nicht zu fest.",
         price: 2, good: &["hidden_tang", "one_piece", "ferrule"]
     },
     mat! {
@@ -289,9 +289,9 @@ pub static MATERIALS: &[Material] = &[
         stab: 1.0, crack: 0.05, work: 0.6,
         figure: "Kontrastreiche Wurzelmaserung, meist hell mit dunklen Adern",
         adh: &["Zwei-Komponenten-Epoxy"],
-        fin: &["Politur", "Hartwachs-Oel"],
+        fin: &["Politur", "Hartwachs-Öl"],
         fast: "Messing-Stift",
-        notes: "Harzgefuellt: kein Kleben noetig (oder nur minimal), nicht spannungsempfindlich. Ideal fuer Konstruktionen mit eingearbeitetem Material.",
+        notes: "Harzgefüllt: kein Kleben nötig (oder nur minimal), nicht spannungsempfindlich. Ideal für Konstruktionen mit eingearbeitetem Material.",
         price: 4, good: &["full_tang", "one_piece", "hidden_tang"]
     },
     mat! {
@@ -303,19 +303,19 @@ pub static MATERIALS: &[Material] = &[
         adh: &["Zwei-Komponenten-Epoxy"],
         fin: &["Politur"],
         fast: "Messing-Stift",
-        notes: "Sehr leicht und steif. Schichtkante sichtbar lassen oder ueberfraesen. Bohrstaub ist scharfkantig - Atemschutz.",
+        notes: "Sehr leicht und steif. Schichtkante sichtbar lassen oder überfräsen. Bohrstaub ist scharfkantig - Atemschutz.",
         price: 3, good: &["one_piece"]
     },
     mat! {
-        key: "horn", name: "Horn (Bueffelhorn)", cat: C::Horn,
+        key: "horn", name: "Horn (Büffelhorn)", cat: C::Horn,
         density: 1.45, janka: Some(2000.0), hard: "sehr hart",
         grain: "schichtig, konzentrisch", oil: 0.25, stab: 0.7,
         crack: 0.6, work: 0.35,
-        figure: "Tiefbraun bis schwarz mit Transparenz, oft helle Knochen-Einschluesse",
+        figure: "Tiefbraun bis schwarz mit Transparenz, oft helle Knochen-Einschlüsse",
         adh: &["Zwei-Komponenten-Epoxy"],
-        fin: &["Politur", "Hartwachs-Oel"],
+        fin: &["Politur", "Hartwachs-Öl"],
         fast: "Messing-Stift",
-        notes: "Klassischer Full-Tang-Griff mit Angel-Einlage. Braucht einen Spalt von 0,03-0,05 mm, sonst bricht die Leimfuge. Nur fein schleifen, nicht viel Waerme - es reisst sonst aus.",
+        notes: "Klassischer Full-Tang-Griff mit Angel-Einlage. Braucht einen Spalt von 0,03-0,05 mm, sonst bricht die Leimfuge. Nur fein schleifen, nicht viel Wärme - es reißt sonst aus.",
         price: 4, good: &["full_tang"]
     },
     mat! {
@@ -323,23 +323,23 @@ pub static MATERIALS: &[Material] = &[
         density: 1.70, janka: None, hard: "hart",
         grain: "kompakt, feinporig", oil: 0.1, stab: 0.8,
         crack: 0.5, work: 0.5,
-        figure: "Elfenbeinfarben, kann eingefaerbt werden",
+        figure: "Elfenbeinfarben, kann eingefärbt werden",
         adh: &["Zwei-Komponenten-Epoxy"],
-        fin: &["Politur", "Faerbung + Oel"],
+        fin: &["Politur", "Färbung + Öl"],
         fast: "Messing-Stift",
-        notes: "Feiner als Horn, gut zu faerben. Muss trocken sein, sonst braucht die Leimfuge lange zum Abbinden. Stabile Alternative zu Horn.",
+        notes: "Feiner als Horn, gut zu färben. Muss trocken sein, sonst braucht die Leimfuge lange zum Abbinden. Stabile Alternative zu Horn.",
         price: 2, good: &["full_tang"]
     },
     mat! {
         key: "geweih", name: "Geweih (Reh/Hirsch)", cat: C::Antler,
         density: 1.55, janka: None, hard: "hart",
-        grain: "poroes, Jahresringe sichtbar", oil: 0.3, stab: 0.75,
+        grain: "porös, Jahresringe sichtbar", oil: 0.3, stab: 0.75,
         crack: 0.45, work: 0.55,
         figure: "Cremefarben mit dunklen Jahresringen",
         adh: &["Zwei-Komponenten-Epoxy"],
-        fin: &["Politur", "Faerbung + Oel"],
+        fin: &["Politur", "Färbung + Öl"],
         fast: "Messing-Stift",
-        notes: "Guter Fuell- und Abstandshalter zwischen Bastion und Schale. Trocknet langsam - Leim lange halten.",
+        notes: "Guter Füll- und Abstandshalter zwischen Bastion und Schale. Trocknet langsam - Leim lange halten.",
         price: 2, good: &["full_tang", "partial_tang"]
     },
     mat! {
@@ -349,9 +349,9 @@ pub static MATERIALS: &[Material] = &[
         crack: 0.0, work: 0.8,
         figure: "Warmes Goldgelb, mit der Zeit Patina",
         adh: &["Kunstharzleim PUR"],
-        fin: &["Politur", "Patina", "Buersten"],
+        fin: &["Politur", "Patina", "Bürsten"],
         fast: "Messing-Stift",
-        notes: "Standard fuer Bastionen, Zwingen und Stifte: weich genug, um die Schale nicht zu sprengen, aber fest genug. Bastion anschliessend an den Rohling anschweissen.",
+        notes: "Standard für Bastionen, Zwingen und Stifte: weich genug, um die Schale nicht zu sprengen, aber fest genug. Bastion anschließend an den Rohling anschweißen.",
         price: 2, good: &["partial_tang", "ferrule", "full_tang"]
     },
     mat! {
@@ -359,11 +359,11 @@ pub static MATERIALS: &[Material] = &[
         density: 8.96, janka: None, hard: "hart",
         grain: "metallisch, weich", oil: 0.0, stab: 1.0,
         crack: 0.0, work: 0.85,
-        figure: "Roetlich-orange, dunkelt zur Patina",
+        figure: "Rötlich-orange, dunkelt zur Patina",
         adh: &["Epoxy mit Sekundenhaft"],
         fin: &["Politur", "Patina"],
         fast: "Kupfer-Stift",
-        notes: "Noch weicher als Messing, klassische Wahl fuer Zwingen an Folienmessern. Nicht mit Stahl verkleben - differentielle Ausdehnung.",
+        notes: "Noch weicher als Messing, klassische Wahl für Zwingen an Folienmessern. Nicht mit Stahl verkleben - differentielle Ausdehnung.",
         price: 3, good: &["ferrule"]
     },
     mat! {
@@ -373,7 +373,7 @@ pub static MATERIALS: &[Material] = &[
         crack: 0.0, work: 0.6,
         figure: "Neutral, matt oder poliert",
         adh: &[],
-        fin: &["Politur", "Buersten", "Sandstrahlen"],
+        fin: &["Politur", "Bürsten", "Sandstrahlen"],
         fast: "Edelstahl-Stift",
         notes: "Rostfrei, aber hart - als Bastion sprengt es Schalen aus weichem Holz. Nur mit Presspassung oder Schraube befestigen, nicht verkleben.",
         price: 2, good: &["partial_tang", "one_piece"]
@@ -387,7 +387,7 @@ pub static MATERIALS: &[Material] = &[
         adh: &[],
         fin: &["Sandstrahlen", "Anodisieren", "Politur"],
         fast: "Titan-Stift",
-        notes: "Leicht und korrosionsbestaendig. Teuer; als Bastion meist Overkill.",
+        notes: "Leicht und korrosionsbeständig. Teuer; als Bastion meist Overkill.",
         price: 5, good: &["partial_tang", "one_piece"]
     },
     mat! {
@@ -399,7 +399,7 @@ pub static MATERIALS: &[Material] = &[
         adh: &["Epoxy mit Sekundenhaft"],
         fin: &["Eloxieren", "Sandstrahlen"],
         fast: "Messing-Stift",
-        notes: "Sehr weich - als Bastion federst, als Griffhuelse aber sehr leicht.",
+        notes: "Sehr weich - als Bastion federst, als Griffhülse aber sehr leicht.",
         price: 2, good: &["ferrule"]
     },
 ];
@@ -512,10 +512,10 @@ pub fn evaluate(
         HandleStyle::OnePiece => {
             if material.is_organic() || material.category == MaterialCategory::Composite {
                 score += 8.0;
-                pros.push("Als Ein-Stueck-Griff mit eingelassener Angel gut machbar.".into());
+                pros.push("Als Ein-Stück-Griff mit eingelassener Angel gut machbar.".into());
             } else {
                 score -= 20.0;
-                cons.push("Metall eignet sich nicht als Ein-Stueck-Griff.".into());
+                cons.push("Metall eignet sich nicht als Ein-Stück-Griff.".into());
             }
         }
         HandleStyle::Ferrule => {
@@ -524,7 +524,7 @@ pub fn evaluate(
                 pros.push("Passt zur Bauart Holzgriff mit Zwinge.".into());
             } else {
                 score -= 18.0;
-                cons.push("Metall ist als Griffkoerper redundant.".into());
+                cons.push("Metall ist als Griffkörper redundant.".into());
             }
         }
     }
@@ -532,13 +532,13 @@ pub fn evaluate(
     // Formstabilitaet
     if material.stability >= 0.85 {
         score += 10.0;
-        pros.push("Sehr formstabil - spaetere Quellung und Verzug sind gering.".into());
+        pros.push("Sehr formstabil - spätere Quellung und Verzug sind gering.".into());
     } else if material.stability < 0.6 {
         score -= 12.0;
-        cons.push("Nur mittere Formstabilitaet - in der Werkstatt vor dem Einbau \
+        cons.push("Nur mittere Formstabilität - in der Werkstatt vor dem Einbau \
                   konditionieren."
             .into());
-        risks.push("Klimaschwankungen in der Werkstatt koennen das Holz verziehen - \
+        risks.push("Klimaschwankungen in der Werkstatt können das Holz verziehen - \
                     vor der Bearbeitung several Tage bei Raumtemperatur lagern."
             .into());
     }
@@ -556,15 +556,15 @@ pub fn evaluate(
     // Oelaufnahme
     if material.oil_absorption >= 0.7 {
         score -= 5.0;
-        cons.push("Saugt Oel stark - Oelung zweimal durchfuehren und 24 Stunden dazwischen \
+        cons.push("Saugt Öl stark - Ölung zweimal durchführen und 24 Stunden dazwischen \
                   trocknen lassen."
             .into());
-        tips.push("Oel in zwei Durchgaengen auftragen, dazwischen mindestens \
+        tips.push("Öl in zwei Durchgängen auftragen, dazwischen mindestens \
                   24 Stunden trocknen lassen."
             .into());
     } else if material.oil_absorption <= 0.25 {
         score += 5.0;
-        pros.push("Nimmt kaum Oel auf - die Masse bleibt stabil, Politur genuegt.".into());
+        pros.push("Nimmt kaum Öl auf - die Masse bleibt stabil, Politur genügt.".into());
     }
 
     // Haerte / Bohrbarkeit
@@ -574,7 +574,7 @@ pub fn evaluate(
             risks.push("Sehr hartes Material: Bohrlocher langsam und mit niedriger \
                         Drehzahl bohren, Werkzeug scharf halten, keinen Hitzestau entstehen lassen."
                 .into());
-            tips.push("Beim Bohren eine Emulsion oder wenig Kuehlmittel verwenden - \
+            tips.push("Beim Bohren eine Emulsion oder wenig Kühlmittel verwenden - \
                        Harz und Staub setzen sich sonst in den Bohren fest."
                 .into());
         }
@@ -583,7 +583,7 @@ pub fn evaluate(
     // Gewicht
     if material.density < 0.45 {
         score += 4.0;
-        pros.push("Sehr leicht - angenehm bei langer Grifflaenge.".into());
+        pros.push("Sehr leicht - angenehm bei langer Grifflänge.".into());
     } else if material.density > 1.3 && material.category != MaterialCategory::Composite {
         score -= 4.0;
         cons.push("Schwer - das Messer wird dadurch kopflastig.".into());
@@ -591,14 +591,14 @@ pub fn evaluate(
 
     // Preis
     if material.price_class >= 5 {
-        cons.push("Edles Material - zwingt zu sorgfaeltiger Arbeit, Fehler sind nicht \
+        cons.push("Edles Material - zwingt zu sorgfältiger Arbeit, Fehler sind nicht \
                    mehr rueckgängig zu machen."
             .into());
     }
 
     // Bauartspezifische Hinweise
     if material.needs_epoxy_gap() {
-        risks.push("Gehaeuse-/Knochenmaterial: die Klebefuge braucht 0,03 - 0,05 mm Spalt. \
+        risks.push("Gehäuse-/Knochenmaterial: die Klebefuge braucht 0,03 - 0,05 mm Spalt. \
                     Mit Epoxy verkleben, nicht mit Leim - sonst bricht die Fuge beim \
                     Ausdehnen."
             .into());
@@ -608,12 +608,12 @@ pub fn evaluate(
     }
     if material.category == MaterialCategory::Wood && material.stability >= 0.85 && material.crack_risk <= 0.3 {
         score += 6.0;
-        pros.push("Kombination aus hoher Stabilitaet und geringem Risikofaktor - \
+        pros.push("Kombination aus hoher Stabilität und geringem Risikofaktor - \
                    die beste Wahl fuer eine Konstruktion, die halten soll."
             .into());
     }
     if params.style == HandleStyle::OnePiece && material.category == MaterialCategory::Wood {
-        risks.push("Bei einem Ein-Stueck-Griff muss der Nut fuer die Angel mit \
+        risks.push("Bei einem Ein-Stück-Griff muss der Nut für die Angel mit \
                     0,03 - 0,05 mm Spiel frisch gefraest werden, sonst spannt das Holz."
             .into());
     }
@@ -625,12 +625,12 @@ pub fn evaluate(
             .into());
     }
     if material.key == "olivenholz" {
-        tips.push("Wegen der unregelmaessigen Struktur jedes Loch mit einer Gegenprobe \
+        tips.push("Wegen der unregelmäßigen Struktur jedes Loch mit einer Gegenprobe \
                    bohren und den Bohrtiefenanschlag nutzen."
             .into());
     }
     if material.key == "eiche" {
-        tips.push("Die grossen Poren aufwischen und mit einer Beize schliessen, sonst \
+        tips.push("Die großen Poren aufwischen und mit einer Beize schliessen, sonst \
                    sammelt sich dort Dreck."
             .into());
     }
