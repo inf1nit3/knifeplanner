@@ -85,6 +85,14 @@ pub fn ist_neuer(neu: &str, alt: &str) -> bool {
 ///
 /// Der Aufruf blockiert - er gehört in einen eigenen Thread.
 pub fn pruefe(repo: &str) -> Result<Option<Update>, String> {
+    pruefe_gegen(repo, eigene_version())
+}
+
+/// Wie `pruefe`, aber gegen eine bestimmte Version.
+///
+/// So laesst sich pruefen, ob der Updater eine neuere Version findet,
+/// ohne die eigene Version zu veraendern.
+pub fn pruefe_gegen(repo: &str, aktuell: &str) -> Result<Option<Update>, String> {
     let client = reqwest::blocking::Client::builder()
         .user_agent(format!("KnifePlanner/{}", eigene_version()))
         .timeout(ZEIT_LIMIT)
@@ -113,7 +121,7 @@ pub fn pruefe(repo: &str) -> Result<Option<Update>, String> {
         return Err("Die Antwort von GitHub war unvollstaendig".into());
     }
     let version = tag.trim_start_matches('v').to_string();
-    if !ist_neuer(&version, eigene_version()) {
+    if !ist_neuer(&version, aktuell) {
         return Ok(None);
     }
     // Die Programmdatei aus dem Release heraussuchen
@@ -278,6 +286,49 @@ mod tests {
         let v = eigene_version();
         assert!(!v.is_empty());
         assert_eq!(v.split('.').count(), 3, "unbekanntes Versionsformat: {v}");
+    }
+
+    #[test]
+    #[ignore = "braucht Netz und ein Release auf GitHub"]
+    fn updater_findet_das_letzte_release() {
+        // Die eigene Version ist aktuell - es gibt also nichts zu laden
+        match pruefe(REPO) {
+            Ok(None) => println!("alles aktuell"),
+            Ok(Some(u)) => println!("gefunden: {}", u.version),
+            Err(e) => panic!("{e}"),
+        }
+        // Gegen eine alte Version muss etwas gefunden werden
+        match pruefe_gegen(REPO, "0.0.1") {
+            Ok(Some(u)) => {
+                assert!(!u.url.is_empty(), "keine Download-Adresse");
+                assert!(u.url.ends_with(".exe"), "falsche Datei: {}", u.url);
+                assert!(u.groesse > 1_000_000, "die Datei ist zu klein: {}", u.groesse);
+                println!("gefunden: Version {} ({:.1} MB)", u.version, u.groesse as f64 / 1_048_576.0);
+            }
+            Ok(None) => panic!("es wurde nichts gefunden"),
+            Err(e) => panic!("{e}"),
+        }
+    }
+
+    #[test]
+    #[ignore = "braucht Netz und ein Release auf GitHub"]
+    fn updater_laedt_die_datei() {
+        let Ok(Some(u)) = pruefe_gegen(REPO, "0.0.1") else {
+            panic!("nichts gefunden");
+        };
+        let ziel = temp_datei(&u.version);
+        let mut meldung = String::new();
+        let ergebnis = lade(&u, &ziel, &mut |geladen, gesamt| {
+            meldung = format!("{geladen} von {gesamt}");
+        });
+        if let Err(e) = ergebnis {
+            println!("Download nicht vollstaendig: {e} ({meldung})");
+        } else {
+            let laenge = std::fs::metadata(&ziel).map(|m| m.len()).unwrap_or(0);
+            println!("geladen: {} Bytes (erwartet {})", laenge, u.groesse);
+            assert!(laenge > 1_000_000, "die Datei ist zu klein: {laenge}");
+        }
+        let _ = std::fs::remove_file(&ziel);
     }
 
     #[test]
