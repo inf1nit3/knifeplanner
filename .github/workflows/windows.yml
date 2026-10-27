@@ -39,7 +39,15 @@ jobs:
         shell: pwsh
         run: |
           $env:MINIMAX_API_KEY = ""
-          .\target\x86_64-pc-windows-msvc\release\knifeplanner.exe --demo
+          # Das Programm laeuft ohne Konsolenfenster. Windows startet
+          # solche Programme abgekoppelt - deshalb muss man hier
+          # ausdruecklich auf das Ende warten.
+          $p = Start-Process -FilePath ".\target\x86_64-pc-windows-msvc\release\knifeplanner.exe" `
+            -ArgumentList "--demo" -Wait -PassThru -NoNewWindow
+          if ($p.ExitCode -ne 0) {
+            Write-Error "Das Programm endete mit $($p.ExitCode)"
+            exit 1
+          }
           if (-not (Test-Path "export-demo\griff_fulltang_110_walnuss.dxf")) {
             Write-Error "DXF wurde nicht erzeugt"
             exit 1
