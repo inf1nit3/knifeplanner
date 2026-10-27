@@ -1,17 +1,44 @@
 //! Programmstart.
 
+// Ohne Konsolenfenster starten - die Kommandozeilen-Ausgaben stehen
+// deshalb im Protokoll (siehe logfile). Das Attribut wirkt nur auf
+// diese Datei; Abhaengigkeiten und deren Build-Skripte bleiben
+// normale Konsolenprogramme.
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 use std::path::PathBuf;
 
 use knifeplanner::export::{dxf, preview, stl, svg, Frame};
 use knifeplanner::model::{BladeBlank, HandleParams, HandleStyle};
 use knifeplanner::plan::{self, DesignPlan};
 
+/// Schreibt eine Zeile auf den Bildschirm und ins Protokoll.
+///
+/// Ohne Konsolenfenster (siehe windows_subsystem) geht die Ausgabe auf
+/// dem Bildschirm verloren - das Protokoll fuehrt sie weiter.
+macro_rules! ausgabe {
+    ($($teil:tt)*) => {{
+        let text = format!($($teil)*);
+        println!("{text}");
+        knifeplanner::logfile::log(&text);
+    }};
+}
+
+/// Wie `ausgabe`, nur fuer Fehlermeldungen (zusätzlich auf stderr).
+macro_rules! fehler_ausgabe {
+    ($($teil:tt)*) => {{
+        let text = format!($($teil)*);
+        eprintln!("{text}");
+        knifeplanner::logfile::log(&text);
+    }};
+}
+
 fn main() -> anyhow::Result<()> {
     knifeplanner::logfile::init();
     let args: Vec<String> = std::env::args().collect();
 
     if args.iter().any(|a| a == "--version" || a == "-V") {
-        println!("KnifePlanner {}", env!("CARGO_PKG_VERSION"));
+        ausgabe!("KnifePlanner {}", env!("CARGO_PKG_VERSION"));
         return Ok(());
     }
 
@@ -35,30 +62,30 @@ fn main() -> anyhow::Result<()> {
             .unwrap_or_else(|| PathBuf::from("freecad-out"));
         match knifeplanner::freecad::finde_freecad(pfad) {
             Some(cmd) => {
-                println!("FreeCAD: {}", cmd.display());
+                ausgabe!("FreeCAD: {}", cmd.display());
                 let blank = BladeBlank::default();
                 let params = HandleParams::default();
                 let plan = DesignPlan::build(&blank, &params, "walnuss");
                 match knifeplanner::freecad::baue(&plan, &blank, &params, &cmd, &ziel) {
                     Ok(ergebnis) => {
-                        println!(
+                        ausgabe!(
                             "Fertig in {} ms\nSTL:  {}\nSTEP: {}",
                             ergebnis.dauer_ms,
                             ergebnis.stl.display(),
                             ergebnis.step.display()
                         );
                         if !ergebnis.meldung.is_empty() {
-                            println!("Meldungen: {}", ergebnis.meldung);
+                            ausgabe!("Meldungen: {}", ergebnis.meldung);
                         }
                     }
                     Err(e) => {
-                        eprintln!("FEHLER: {e}");
+                        fehler_ausgabe!("FEHLER: {e}");
                         std::process::exit(1);
                     }
                 }
             }
             None => {
-                eprintln!(
+                fehler_ausgabe!(
                     "FreeCAD nicht gefunden. Pfad angeben: --freecad <pfad/ziel> \
                      oder FREECAD_CMD setzen."
                 );
@@ -97,7 +124,7 @@ fn main() -> anyhow::Result<()> {
         let (w, h) = (1600usize, 1000usize);
         let rgba = knifeplanner::render3d::render(&scene, w, h, &cam, 4);
         knifeplanner::render3d::save_png(&png, &rgba, w, h)?;
-        println!("Render: {}", png.display());
+        ausgabe!("Render: {}", png.display());
         return Ok(());
     }
 
@@ -111,9 +138,9 @@ fn main() -> anyhow::Result<()> {
             .unwrap_or_else(|| PathBuf::from("selbsttest"));
         std::fs::create_dir_all(&dir).ok();
         let (report, text) = knifeplanner::selftest::run(&dir);
-        println!("{text}");
+        ausgabe!("{text}");
         let path = knifeplanner::selftest::write_report(&dir, &text);
-        println!("Bericht gespeichert: {}", path.display());
+        ausgabe!("Bericht gespeichert: {}", path.display());
         return if report.failed() == 0 { Ok(()) } else {
             anyhow::bail!("{} Pruefpunkte fehlgeschlagen", report.failed())
         };
@@ -135,12 +162,12 @@ fn main() -> anyhow::Result<()> {
         let path = PathBuf::from(path);
         if material {
             let (analysis, raw) = client.analyze_material(&path)?;
-            println!("{}", serde_json::to_string_pretty(&analysis)?);
-            println!("\n--- Rohtext ---\n{raw}");
+            ausgabe!("{}", serde_json::to_string_pretty(&analysis)?);
+            ausgabe!("\n--- Rohtext ---\n{raw}");
         } else {
             let (analysis, raw) = client.analyze_blade(&path)?;
-            println!("{}", serde_json::to_string_pretty(&analysis)?);
-            println!("\n--- Rohtext ---\n{raw}");
+            ausgabe!("{}", serde_json::to_string_pretty(&analysis)?);
+            ausgabe!("\n--- Rohtext ---\n{raw}");
         }
         return Ok(());
     }
@@ -192,7 +219,7 @@ fn main() -> anyhow::Result<()> {
                 mx[1] = mx[1].max(v.1);
                 mx[2] = mx[2].max(v.2);
             }
-            println!(
+            ausgabe!(
                 "{:>14}: X {:7.2}..{:7.2}  Y {:7.2}..{:7.2}  Z {:7.2}..{:7.2}  ({} Dreiecke)",
                 part.name,
                 mn[0],
@@ -224,7 +251,7 @@ fn main() -> anyhow::Result<()> {
         let (w, h) = (1600usize, 1000usize);
         let rgba = knifeplanner::render3d::render(&scene, w, h, &cam, 4);
         knifeplanner::render3d::save_png(&out, &rgba, w, h)?;
-        println!("3D-Render: {}", out.display());
+        ausgabe!("3D-Render: {}", out.display());
         return Ok(());
     }
 
@@ -258,7 +285,7 @@ fn demo() -> anyhow::Result<()> {
     std::fs::create_dir_all(&dir)?;
 
     let dxf_path = dxf::write_dxf(&dir, &plan.geometry, &blank, &params, &plan.verdict)?;
-    println!("DXF:      {}", dxf_path.display());
+    ausgabe!("DXF:      {}", dxf_path.display());
 
     let frame = Frame::from_geometry(&plan.geometry, &blank);
     let svg_path = dir.join("griff.svg");
@@ -266,30 +293,30 @@ fn demo() -> anyhow::Result<()> {
         &svg_path,
         svg::build_svg(&plan.geometry, &blank, &params, &plan.verdict, frame),
     )?;
-    println!("SVG:      {}", svg_path.display());
+    ausgabe!("SVG:      {}", svg_path.display());
 
     let stl_path = stl::write_stl_file(&dir, &plan.geometry, &blank, &params, &plan.verdict)?;
-    println!("STL:      {}", stl_path.display());
+    ausgabe!("STL:      {}", stl_path.display());
 
     let (obj_path, mtl_path) = stl::write_obj(&dir, &plan.geometry, &blank, &params, &plan.verdict)?;
-    println!("OBJ:      {}", obj_path.display());
-    println!("MTL:      {}", mtl_path.display());
+    ausgabe!("OBJ:      {}", obj_path.display());
+    ausgabe!("MTL:      {}", mtl_path.display());
 
     let bohrplan = dir.join("bohrplan.pdf");
     plan::build_bohrplan_pdf(&plan).save(&bohrplan)?;
-    println!("Bohrplan: {}", bohrplan.display());
+    ausgabe!("Bohrplan: {}", bohrplan.display());
 
     let bauplan = dir.join("bauplan.pdf");
     plan::build_bauplan_pdf(&plan).save(&bauplan)?;
-    println!("Bauplan:  {}", bauplan.display());
+    ausgabe!("Bauplan:  {}", bauplan.display());
 
     let schablone = dir.join("schablone_1zu1.pdf");
     plan::build_schablone_pdf(&plan).save(&schablone)?;
-    println!("Schablone: {}", schablone.display());
+    ausgabe!("Schablone: {}", schablone.display());
 
     let txt = dir.join("bauplan.txt");
     std::fs::write(&txt, plan.report_text())?;
-    println!("Text:     {}", txt.display());
+    ausgabe!("Text:     {}", txt.display());
 
     let png_path = dir.join("vorschau.png");
     preview::render_preview(
@@ -299,7 +326,7 @@ fn demo() -> anyhow::Result<()> {
         &plan.verdict,
         &png_path,
     )?;
-    println!("Vorschau: {}", png_path.display());
+    ausgabe!("Vorschau: {}", png_path.display());
 
     // Beispielprojekte zum Sofort-Ausprobieren
     let beispiele: Vec<(&str, HandleStyle, &str, f64, f64)> = vec![
@@ -341,8 +368,8 @@ fn demo() -> anyhow::Result<()> {
         proj.blank.edge_offset_mm = 15.0;
         let path = dir.join(format!("beispielprojekt_{name}.json"));
         match proj.save(&path) {
-            Ok(()) => println!("Projekt:  {}", path.display()),
-            Err(e) => println!("Projekt fehlgeschlagen: {e}"),
+            Ok(()) => ausgabe!("Projekt:  {}", path.display()),
+            Err(e) => ausgabe!("Projekt fehlgeschlagen: {e}"),
         }
     }
 
@@ -364,8 +391,8 @@ fn demo() -> anyhow::Result<()> {
     let rgba = knifeplanner::render3d::render(&scene, w, h, &cam, 4);
     let render_path = dir.join("griff3d.png");
     knifeplanner::render3d::save_png(&render_path, &rgba, w, h)?;
-    println!("3D:       {}", render_path.display());
+    ausgabe!("3D:       {}", render_path.display());
 
-    println!("\n{}", plan.report_text());
+    ausgabe!("\n{}", plan.report_text());
     Ok(())
 }

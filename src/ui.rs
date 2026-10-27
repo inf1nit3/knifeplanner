@@ -1058,12 +1058,18 @@ impl App {
             let version = update.version.clone();
             let ziel = ziel.clone();
             let tx2 = tx.clone();
+            // Der Fortschritt wird nur alle 512 KB gemeldet - sonst
+            // stellt sich die Warteschlange bei grossen Dateien zu.
+            let mut zuletzt = 0u64;
             let zustand = match crate::update::lade(&update, &ziel, &mut |geladen, gesamt| {
-                let _ = tx2.send(crate::update::Zustand::Laedt {
-                    version: version.clone(),
-                    geladen,
-                    gesamt,
-                });
+                if geladen - zuletzt >= 512 * 1024 || geladen == gesamt {
+                    zuletzt = geladen;
+                    let _ = tx2.send(crate::update::Zustand::Laedt {
+                        version: version.clone(),
+                        geladen,
+                        gesamt,
+                    });
+                }
             }) {
                 Ok(()) => crate::update::Zustand::Fertig {
                     version,
