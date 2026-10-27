@@ -11,7 +11,6 @@ use std::fmt::Write as _;
 use std::fs;
 use std::path::Path;
 
-use crate::geometry::tang_half_width;
 use crate::model::{BladeBlank, HandleGeometry, HandleParams, HandleStyle};
 
 use super::{file_stem, Frame};
@@ -129,7 +128,7 @@ pub fn build_dxf(
         "{} | Schalendicke {:.1} mm | Angel {:.1} x {:.1} mm | {} | Zuschnitt Holzleiste {:.0} x {:.0} x {:.0} mm",
         material.material_name,
         geo.scale_thickness_mm,
-        blank.tang_width_mm,
+        crate::geometry::angel_hoehe_am_heft(blank, params),
         blank.tang_thickness_mm,
         match params.style {
             HandleStyle::FullTangTwoScale => "Full Tang, 2 Schalen",
@@ -179,8 +178,9 @@ pub fn write_dxf(
 }
 
 /// Hilfsfunktion fuer die Vorschau: Tanghoehe an einer Stelle.
-pub fn tang_width_at(blank: &BladeBlank, x: f64) -> f64 {
-    tang_half_width(blank, x) * 2.0
+pub fn tang_width_at(geo: &HandleGeometry, x: f64) -> f64 {
+    let (oben, unten) = crate::geometry::tang_hoehe_aus_profil(&geo.tang_profile, x);
+    oben - unten
 }
 
 /// Rahmen fuer die 2D-Ausgabe.

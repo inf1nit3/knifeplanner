@@ -81,29 +81,53 @@ fn smooth_min(values: &[f64], window: usize) -> Vec<f64> {
 // Angelprofil
 // ---------------------------------------------------------------------------
 
-/// Halbe Angelbreite an der Stelle x (0 = Vorderkante des Griffs).
-pub fn tang_half_width(b: &BladeBlank, x: f64) -> f64 {
+/// Die Angel am Heft: (oben, unten) in der Hoehenrichtung.
+///
+/// Die Angel sitzt auf der Mittellinie der Klinge. Ohne eigene Vorgabe aus
+/// dem Rohling ist sie so hoch wie die Klinge am Heft - der Stahl geht dann
+/// ohne Absatz aus der Klinge in den Griff ueber.
+fn tang_am_heft(b: &BladeBlank, p: &HandleParams) -> (f64, f64) {
+    let mitte = (b.spine_offset_mm - b.edge_offset_mm.abs()) / 2.0;
+    let klinge_hoehe = b.spine_offset_mm + b.edge_offset_mm.abs();
+    let hoehe = if b.tang_width_mm > 0.0 {
+        // Ein eigener Wert beschreibt einen Rohling mit abgesetztem Heft.
+        b.tang_width_mm.min(klinge_hoehe)
+    } else if p.style == HandleStyle::OnePiece {
+        // Beim Ein-Stueck-Griff steckt nur ein verdeckter Ansatz im Holz.
+        p.hidden_tang_height_mm.min(klinge_hoehe)
+    } else {
+        klinge_hoehe
+    };
+    (mitte + hoehe / 2.0, mitte - hoehe / 2.0)
+}
+
+/// Der Verjuengungsfaktor der Angel an der Stelle x.
+///
+/// 1 = volle Hoehe am Heft, 0 = die Angel ist zu Ende.
+fn tang_faktor(b: &BladeBlank, hoehe0: f64, x: f64) -> f64 {
     let l = b.tang_length_mm;
-    let w0 = b.tang_width_mm / 2.0;
     if x <= 0.0 {
-        return w0;
+        return 1.0;
     }
     if x >= l {
         return 0.0;
     }
     if !b.tang_taper {
-        return w0;
+        return 1.0;
     }
 
     let x0 = clamp(b.tang_taper_start, 0.0, 0.95) * l;
     if x <= x0 {
-        return w0;
+        return 1.0;
     }
 
-    let w_back = b.tang_back_width_mm / 2.0;
-    if w_back > 0.0 {
+    let h0 = (hoehe0 / 2.0).max(0.1);
+
+    // Eine Angel mit eigener Breite am Ende.
+    if b.tang_back_width_mm > 0.0 {
         let t = (x - x0) / (l - x0).max(1e-6);
-        return (w0 + (w_back - w0) * t).max(0.0);
+        let f_back = (b.tang_back_width_mm / 2.0 / h0).min(1.0);
+        return (1.0 + (f_back - 1.0) * t).max(0.0);
     }
 
     // Verjuengung auf eine runde Spitze.
@@ -113,24 +137,78 @@ pub fn tang_half_width(b: &BladeBlank, x: f64) -> f64 {
     // So bleibt der Draht geschlossen - ein Ansatz auf Null Breite wuerde
     // zweimal dieselbe Strecke erzeugen und den Draht ueberschneiden.
     let span = (l - x0).max(1e-6);
-    let r = (w0 * 0.5).max(0.5).min(span * 0.10);
+    let r = (h0 * 0.5).max(0.5).min(span * 0.10).min(2.0);
     let x_rund = (l - r).max(x0);
     if x <= x_rund {
         let t = (x - x0) / (x_rund - x0).max(1e-6);
-        return (w0 + (r - w0) * t).max(0.0);
+        return (1.0 + (r / h0 - 1.0) * t).max(0.0);
     }
     let d = x - x_rund;
     if d >= r {
         return 0.0;
     }
-    ((r * r - d * d).max(0.0)).sqrt()
+    ((r * r - d * d).max(0.0)).sqrt() / h0
+}
+
+/// Die Angelform an der Stelle x: (oben, unten) in der Hoehenrichtung.
+///
+/// None, wenn an dieser Stelle keine Angel mehr liegt.
+pub fn tang_hoehe(b: &BladeBlank, p: &HandleParams, x: f64) -> Option<(f64, f64)> {
+    let (oben0, unten0) = tang_am_heft(b, p);
+    let f = tang_faktor(b, oben0 - unten0, x);
+    if f <= 0.0 {
+        return None;
+    }
+    let mitte = (oben0 + unten0) / 2.0;
+    Some((
+        mitte + (oben0 - mitte) * f,
+        mitte + (unten0 - mitte) * f,
+    ))
+}
+
+/// Die halbe Hoehe der Angel an der Stelle x.
+///
+/// Nur fuer Vergleiche und Warnungen - die Angel ist seit der Umstellung
+/// auf die Klingenkontur nicht mehr symmetrisch.
+pub fn tang_half_width(b: &BladeBlank, p: &HandleParams, x: f64) -> f64 {
+    match tang_hoehe(b, p, x) {
+        Some((oben, unten)) => (oben - unten) / 2.0,
+        None => 0.0,
+    }
+}
+
+/// Die hoehe der Angel am Heft - so hoch, wie sie gerechnet wird.
+///
+/// Bei der automatischen Angel (Rohling ohne eigene Vorgabe) ist das die
+/// volle Hoehe der Klinge am Heft.
+pub fn angel_hoehe_am_heft(b: &BladeBlank, p: &HandleParams) -> f64 {
+    match tang_hoehe(b, p, 0.0) {
+        Some((oben, unten)) => oben - unten,
+        None => 0.0,
+    }
+}
+
+/// Die Angelform aus dem bereits gerechneten Profil.
+///
+/// Das Profil enthaelt oben und unten; an der Stelle x liefern die beiden
+/// Punkte die Ober- und die Unterkante.
+pub fn tang_hoehe_aus_profil(profil: &[(f64, f64)], x: f64) -> (f64, f64) {
+    let mut oben = f64::MIN;
+    let mut unten = f64::MAX;
+    for &(px, py) in profil {
+        if (px - x).abs() <= SAMPLE_STEP {
+            oben = oben.max(py);
+            unten = unten.min(py);
+        }
+    }
+    if oben > unten { (oben, unten) } else { (0.0, 0.0) }
 }
 
 /// Angelprofil als geschlossenes Polygon.
 ///
 /// Die Punkte mit Null Breite werden weggelassen, damit kein Stueck
 /// zweimal durchlaufen wird. Die Spitze ist ein eigener Punkt.
-pub fn tang_profile(b: &BladeBlank, step: f64) -> Vec<Point> {
+pub fn tang_profile(b: &BladeBlank, p: &HandleParams, step: f64) -> Vec<Point> {
     let l = b.tang_length_mm;
     let mut xs: Vec<f64> = (0..=(l / step).floor() as usize)
         .map(|i| i as f64 * step)
@@ -140,16 +218,17 @@ pub fn tang_profile(b: &BladeBlank, step: f64) -> Vec<Point> {
     }
     let mut oben: Vec<Point> = Vec::new();
     let mut unten: Vec<Point> = Vec::new();
+    let mut mitte = 0.0;
     for &x in &xs {
-        let w = tang_half_width(b, x);
-        if w > 1e-4 {
-            oben.push((x, w));
-            unten.push((x, -w));
+        if let Some((o, u)) = tang_hoehe(b, p, x) {
+            mitte = (o + u) / 2.0;
+            oben.push((x, o));
+            unten.push((x, u));
         }
     }
     // Die runde Spitze als eigenen Punkt aufnehmen
     if oben.last().map(|p| (p.0 - l).abs() > 1e-4).unwrap_or(false) {
-        oben.push((l, 0.0));
+        oben.push((l, mitte));
     }
     let mut poly = oben;
     poly.extend(unten.into_iter().rev());
@@ -246,22 +325,20 @@ fn grip_growth(b: &BladeBlank, p: &HandleParams) -> f64 {
 /// Zwinge und die Kurven fuer die Komfortrundung nehmen dieselbe Linie,
 /// damit kein Absatz zwischen den Bauteilen entsteht.
 fn spine_mit_wand(b: &BladeBlank, p: &HandleParams, x: f64, x_end: f64) -> f64 {
-    let w = tang_half_width(b, x);
-    if w <= 0.0 {
-        return spine_curve(b, p, x, x_end);
+    let wand = p.wall_min_mm.max(0.8);
+    match tang_hoehe(b, p, x) {
+        Some((oben, _)) => spine_curve(b, p, x, x_end).max(oben + wand),
+        None => spine_curve(b, p, x, x_end),
     }
-    let wall = p.wall_min_mm.max(0.8);
-    spine_curve(b, p, x, x_end).max(w + wall)
 }
 
 /// Die Bauchlinie mit der Wand um die Angel herum.
 fn bauch_mit_wand(b: &BladeBlank, p: &HandleParams, x: f64, x_end: f64) -> f64 {
-    let w = tang_half_width(b, x);
-    if w <= 0.0 {
-        return belly_curve(b, p, x, x_end);
+    let wand = p.wall_min_mm.max(0.8);
+    match tang_hoehe(b, p, x) {
+        Some((_, unten)) => belly_curve(b, p, x, x_end).min(unten - wand),
+        None => belly_curve(b, p, x, x_end),
     }
-    let wall = p.wall_min_mm.max(0.8);
-    belly_curve(b, p, x, x_end).min(-(w + wall))
 }
 
 /// Glockenkurve: 0 an den Raendern, 1 in der Mitte bei `center`.
@@ -417,7 +494,7 @@ pub fn plan_pins(b: &BladeBlank, p: &HandleParams) -> Vec<PinSpec> {
     // Bolzen sitzt deshalb so weit hinten, wie die Angel noch dick genug ist.
     let min_half = dia / 2.0 + 0.8;
     let mut rear = x1 - 3.0;
-    while rear > x0 + 4.0 && tang_half_width(b, rear) < min_half {
+    while rear > x0 + 4.0 && tang_half_width(b, p, rear) < min_half {
         rear -= 0.5;
     }
     if rear <= x0 + 4.0 {
@@ -541,7 +618,7 @@ pub fn plan_pins(b: &BladeBlank, p: &HandleParams) -> Vec<PinSpec> {
         } else {
             (clamp(l - 8.0, 6.0, (l - 2.0).max(6.0)), "y")
         };
-        let tang_there = tang_half_width(b, x_lanyard);
+        let tang_there = tang_half_width(b, p, x_lanyard);
         let note = if tang_there > 0.02 {
             format!(
                 "Durch das Griffende gebohrt, quer zur Grifflaenge. Die Angel reicht hier \
@@ -674,7 +751,7 @@ pub fn griff_ringe_ebene(
     let mut p2 = p.clone();
     p2.section.taper_mm = 0.0;
     let (outline, _) = build_outline(b, &p2);
-    let tang = tang_profile(b, SAMPLE_STEP);
+    let tang = tang_profile(b, &p2, SAMPLE_STEP);
     let recess = if p2.glue_gap_mm != 0.0 {
         offset_polygon(&tang, -p2.glue_gap_mm)
     } else {
@@ -731,9 +808,15 @@ pub fn rueckenlinie(b: &BladeBlank, p: &HandleParams, x: f64) -> f64 {
     spine_curve(b, p, x, griff_ende(b, p))
 }
 
-/// Die halbe Breite der Angel an der Stelle x.
-pub fn angel_breite(b: &BladeBlank, x: f64) -> f64 {
-    tang_half_width(b, x)
+/// Die Unterkante der Angel an der Stelle x.
+///
+/// Das ist die y-Lage, bis zu der die Angel im Holz liegt - der
+/// Lanyardloch endet dort, weil der Bohler unter der Angel durchgeht.
+pub fn angel_unten(b: &BladeBlank, p: &HandleParams, x: f64) -> Option<f64> {
+    match tang_hoehe(b, p, x) {
+        Some((_, unten)) => Some(unten),
+        None => None,
+    }
 }
 
 /// Die empfohlene Groesse des Holzleisten fuer den Griff.
@@ -776,7 +859,7 @@ pub fn build_geometry(b: &BladeBlank, p: &HandleParams) -> HandleGeometry {
     let (outline, outline_warnings) = build_outline(b, p);
     warnings.extend(outline_warnings);
 
-    let tang = tang_profile(b, SAMPLE_STEP);
+    let tang = tang_profile(b, p, SAMPLE_STEP);
     let recess = if p.glue_gap_mm != 0.0 {
         offset_polygon(&tang, -p.glue_gap_mm)
     } else {
@@ -815,7 +898,10 @@ pub fn build_geometry(b: &BladeBlank, p: &HandleParams) -> HandleGeometry {
     // Fehler; bei Bastion und Ein-Stück-Griff ist eine schmale Angel
     // gewollt, weil sie im Metall bzw. als Nase im Holz liegt.
     let klingen_hoehe = b.spine_offset_mm + b.edge_offset_mm.abs();
-    let angel_hoehe = 2.0 * tang_half_width(b, 0.0);
+    let angel_hoehe = match tang_hoehe(b, p, 0.0) {
+        Some((o, u)) => o - u,
+        None => 0.0,
+    };
     let angel_durch_holz = p.style.has_two_scales() || p.style == HandleStyle::Ferrule;
     if angel_durch_holz && klingen_hoehe - angel_hoehe > 1.0 {
         let ueberhang = (klingen_hoehe - angel_hoehe) / 2.0;
@@ -824,12 +910,11 @@ pub fn build_geometry(b: &BladeBlank, p: &HandleParams) -> HandleGeometry {
             format!(
                 "Die Angel ist nur {} hoch, die Klinge am Heft {}: der Stahl ragt je {} über \
                  die Angel hinaus, die Klinge hängt nur an einem schmalen Streifen. Für eine \
-                 durchgehende Angel die Angel-Breite auf {} setzen - der Griff passt sich dann \
-                 an.",
+                 durchgehende Angel die Angel-Breite auf 0 stellen (automatisch = Klingenhöhe \
+                 am Heft) - oder den Absatz der Klinge auf die Höhe der Angel bringen.",
                 de_mm(angel_hoehe, 1),
                 de_mm(klingen_hoehe, 1),
-                de_mm(ueberhang, 1),
-                de_mm(klingen_hoehe, 1)
+                de_mm(ueberhang, 1)
             ),
         );
     }
@@ -1045,34 +1130,78 @@ mod tests {
 
     #[test]
     fn schmale_angel_wird_gemahnt() {
-        // Der Rohling mit 26 mm Klingenhoehe und 6,5 mm Angel ist der
-        // Standardfall: die Angel nimmt die Klinge nicht auf. Das muss
-        // im Plan stehen.
+        // Der Standardfall: die Angel nimmt die Hoehe der Klinge am Heft
+        // an, es gibt nichts zu meckern.
         let b = BladeBlank::default();
         let p = HandleParams::default();
         let g = build_geometry(&b, &p);
         assert!(
-            g.warnings.iter().any(|w| w.contains("Angel ist nur")),
-            "Es fehlt der Hinweis auf die zu schmale Angel: {:?}",
+            !g.warnings.iter().any(|w| w.contains("Angel ist nur")),
+            "Der Hinweis darf nicht erscheinen: {:?}",
             g.warnings
         );
 
-        // Mit der Angel in der Hoehe der Klinge verschwindet der Hinweis.
+        // Ein Rohling mit schmaler Angel aber voller Klinge: dann ragt der
+        // Stahl ueber die Angel hinaus, und das muss im Plan stehen.
         let mut b2 = BladeBlank::default();
-        b2.tang_width_mm = b2.spine_offset_mm + b2.edge_offset_mm.abs();
+        b2.tang_width_mm = 6.5;
         let g2 = build_geometry(&b2, &p);
         assert!(
-            !g2.warnings.iter().any(|w| w.contains("Angel ist nur")),
-            "Der Hinweis muss verschwinden: {:?}",
+            g2.warnings.iter().any(|w| w.contains("Angel ist nur")),
+            "Es fehlt der Hinweis auf die zu schmale Angel: {:?}",
             g2.warnings
         );
     }
-
     #[test]
     fn tang_width_starts_correct() {
         let b = default_blank();
-        assert!((tang_half_width(&b, 0.0) - 3.25).abs() < 1e-9);
-        assert!((tang_half_width(&b, 110.0) - 0.0).abs() < 1e-9);
+        let p = HandleParams::default();
+        // Der Rohling gibt die Angelbreite vor (6,5 mm) - die Angel sitzt
+        // mittig auf der Mittellinie der Klinge.
+        assert!((tang_half_width(&b, &p, 0.0) - 3.25).abs() < 1e-9);
+        assert!((tang_half_width(&b, &p, 110.0) - 0.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn die_automatische_angel_ist_so_hoch_wie_die_klinge() {
+        // Ohne eigene Vorgabe aus dem Rohling geht der Stahl ohne Absatz
+        // aus der Klinge in den Griff - das ist der Normalfall.
+        let mut b = BladeBlank::default();
+        b.tang_width_mm = 0.0;
+        let p = HandleParams::default();
+        let (oben, unten) = tang_hoehe(&b, &p, 0.0).expect("keine Angel am Heft");
+        assert!((oben - b.spine_offset_mm).abs() < 1e-9, "oben {oben}");
+        assert!((unten + b.edge_offset_mm.abs()).abs() < 1e-9, "unten {unten}");
+        assert!((oben - unten - (b.spine_offset_mm + b.edge_offset_mm.abs())).abs() < 1e-9);
+    }
+
+    #[test]
+    fn eine_angel_mit_choil_bleibt_kuerzer() {
+        // Ein Rohling mit abgesetztem Heft: der Stahl ist am Heft niedriger
+        // als die Klinge, sitzt aber mittig auf der Mittellinie.
+        let mut b = BladeBlank::default();
+        b.tang_width_mm = 14.0;
+        let p = HandleParams::default();
+        let (oben, unten) = tang_hoehe(&b, &p, 0.0).expect("keine Angel am Heft");
+        assert!((oben - unten - 14.0).abs() < 1e-9, "Hoehe {}", oben - unten);
+        assert!((oben + unten).abs() < 1e-9, "Die Angel sitzt nicht mittig");
+    }
+
+    #[test]
+    fn der_ein_stueck_griff_bekommt_einen_verdeckten_ansatz() {
+        // In ein Stueck Holz passt keine durchgehende Angel - dort steckt
+        // nur ein kurzer Ansatz in einer Tasche.
+        let b = BladeBlank::default();
+        let mut p = HandleParams::default();
+        p.style = HandleStyle::OnePiece;
+        let (oben, unten) = tang_hoehe(&b, &p, 0.0).expect("keine Angel am Heft");
+        assert!(
+            (oben - unten - p.hidden_tang_height_mm).abs() < 1e-9,
+            "Hoehe {} statt {}",
+            oben - unten,
+            p.hidden_tang_height_mm
+        );
+        assert!(oben - unten < 20.0, "Der Ansatz ist zu hoch");
     }
 
     #[test]
@@ -1083,13 +1212,16 @@ mod tests {
         assert!(outline.len() > 50);
         // Oberhalb der Angel muss immer >= wall_min Abstand bleiben
         for &x in &[10.0, 40.0, 55.0, 80.0] {
-            let w = tang_half_width(&b, x);
+            let (oben, _) = tang_hoehe(&b, &p, x).expect("keine Angel");
             let top = outline
                 .iter()
                 .filter(|&&(px, _)| (px - x).abs() < 1.0)
                 .map(|&(_, y)| y)
                 .fold(f64::MIN, f64::max);
-            assert!(top >= w + p.wall_min_mm - 1e-6, "Wand zu duenn bei x={x}");
+            assert!(
+                top >= oben + p.wall_min_mm - 1e-6,
+                "Wand zu duenn bei x={x}"
+            );
         }
     }
 
@@ -1151,7 +1283,7 @@ mod tests {
             "Der ergonomische Griff muss fueller sein als das Heft: {grip} gegen {front}"
         );
         // Die Angel muss weiterhin Platz haben
-        let w = tang_half_width(&b, 50.0);
+        let w = tang_half_width(&b, &p, 50.0);
         let mut top = f64::MIN;
         for &(px, py) in &outline {
             if (px - 50.0).abs() < 1.5 {
@@ -1523,22 +1655,21 @@ pub fn body_rings(
     if angel_im_holz {
         for &pt in outline.iter() {
             let x = pt.0;
-            let w = tang_half_width(b, x);
-            if w <= 0.0 {
-                continue;
-            }
+            let (tang_oben, tang_unten) = match tang_hoehe(b, p, x) {
+                Some(v) => v,
+                None => continue,
+            };
             let bot = belly_curve(b, p, x, x_end);
             let top = spine_curve(b, p, x, x_end);
             let height = (top - bot).max(0.5);
             let u = ((pt.1 - bot) / height).clamp(0.0, 1.0);
-            let grenze = w + wand_staerke;
             if u <= 0.001 && spec.belly_round_mm > 0.01 {
                 // Die Bauchseite darf hoechstens bis zur Wand angehoben werden
-                let erlaubt = (-grenze - pt.1).max(0.0);
+                let erlaubt = (tang_unten - wand_staerke - pt.1).max(0.0);
                 k_bauch = k_bauch.min(erlaubt / spec.belly_round_mm);
             }
             if u >= 0.999 && spec.spine_round_mm > 0.01 {
-                let erlaubt = (pt.1 - grenze).max(0.0);
+                let erlaubt = (pt.1 - (tang_oben + wand_staerke)).max(0.0);
                 k_ruecken = k_ruecken.min(erlaubt / spec.spine_round_mm);
             }
         }
@@ -1820,7 +1951,7 @@ mod ring_tests {
         // sonst schneidet der Draht sich selbst.
         let b = BladeBlank::default();
         let p = HandleParams::default();
-        let tang = tang_profile(&b, 0.75);
+        let tang = tang_profile(&b, &p, 0.75);
         assert!(tang.len() > 10, "Angel zu kurz: {}", tang.len());
         assert!(
             crate::mesh::is_simple_polygon(&tang),
@@ -1906,8 +2037,10 @@ pub struct CrossSection {
     /// Je Koerper (Schale) die untere und obere Grenze:
     /// (z, untere Grenze) und (z, obere Grenze), jeweils aufsteigend nach z
     pub bodies: Vec<(Vec<(f64, f64)>, Vec<(f64, f64)>)>,
-    /// halbe Angelbreite an der Stelle
-    pub tang_half_width: f64,
+    /// Oberkante der Angel an der Stelle
+    pub tang_oben: f64,
+    /// Unterkante der Angel an der Stelle
+    pub tang_unten: f64,
     /// halbe Angeldicke
     pub tang_half_thickness: f64,
     /// y-Ausdehnung des Profiles an der Stelle
@@ -1998,17 +2131,18 @@ pub fn cross_section(
         .flat_map(|(l, u)| l.iter().chain(u.iter()))
         .collect();
 
-    let tang_half_width = crate::geometry::tang_half_width(blank, x);
+    let (tang_oben, tang_unten) = tang_hoehe_aus_profil(&geo.tang_profile, x);
     let min_y = all.iter().map(|v| v.1).fold(f64::MAX, f64::min);
     let max_y = all.iter().map(|v| v.1).fold(f64::MIN, f64::max);
 
     Some(CrossSection {
         bodies,
-        tang_half_width,
+        tang_oben,
+        tang_unten,
         tang_half_thickness: blank.tang_thickness_mm / 2.0,
         height: max_y - min_y,
-        wall_spine: max_y - tang_half_width,
-        wall_belly: tang_half_width - min_y,
+        wall_spine: max_y - tang_oben,
+        wall_belly: tang_unten - min_y,
     })
 }
 
@@ -2068,4 +2202,5 @@ mod zuschnitt_tests {
         assert!(dicke > 4.0, "Das Holz ist zu duenn: {dicke}");
     }
 }
+
 

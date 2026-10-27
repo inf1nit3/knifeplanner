@@ -124,6 +124,12 @@ pub struct BladeBlank {
     pub blade_thickness_mm: f64,
 
     pub tang_length_mm: f64,
+    /// Hoehe des Stahls am Heft - die Angelbreite im Seitenbild.
+    ///
+    /// 0 = automatisch: die Angel ist so hoch wie die Klinge am Heft, der
+    /// Stahl geht also ohne Absatz in den Griff ueber. Ein eigener Wert
+    /// beschreibt einen Rohling mit abgesetztem Heft (Choil, Parierstich).
+    #[serde(default)]
     pub tang_width_mm: f64,
     pub tang_thickness_mm: f64,
     pub tang_style: TangStyle,
@@ -148,7 +154,10 @@ impl Default for BladeBlank {
             blade_width_mm: 26.0,
             blade_thickness_mm: 3.0,
             tang_length_mm: 110.0,
-            tang_width_mm: 6.5,
+            // 0 = die Angel ist so hoch wie die Klinge am Heft. Das ist der
+            // Normalfall einer durchgehenden Angel - der Stahl laeuft ohne
+            // Absatz aus der Klinge in den Griff.
+            tang_width_mm: 0.0,
             // Die Angel ist so dick wie der Ruecken der Klinge - bei einer
             // 3 mm dicken Schneide sind das etwa 4,5 mm.
             tang_thickness_mm: 4.5,
@@ -286,6 +295,11 @@ impl Default for SectionSpec {
     }
 }
 
+/// Standardhoehe des verdeckten Ansatzes beim Ein-Stueck-Griff.
+pub fn standard_hidden_tang() -> f64 {
+    6.5
+}
+
 /// Gestaltungsparameter des Griffs.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct HandleParams {
@@ -309,6 +323,14 @@ pub struct HandleParams {
 
     pub bolster_width_mm: f64,
     pub ferrule_width_mm: f64,
+
+    /// Hoehe des verdeckten Ansatzes beim Ein-Stueck-Griff.
+    ///
+    /// Dort steckt kein durchgehender Stahl im Holz, sondern nur ein kurzer
+    /// Ansatz, der in eine Tasche gesetzt wird. Der Absatz der Klinge wird
+    /// auf diese Hoehe geschliffen.
+    #[serde(default = "standard_hidden_tang")]
+    pub hidden_tang_height_mm: f64,
 
     pub edge_break_mm: f64,
     pub lanyard_hole: bool,
@@ -341,6 +363,7 @@ impl Default for HandleParams {
             front_bevel_deg: 0.0,
             bolster_width_mm: 18.0,
             ferrule_width_mm: 14.0,
+            hidden_tang_height_mm: standard_hidden_tang(),
             edge_break_mm: 0.8,
             lanyard_hole: true,
             lanyard_hole_dia_mm: 5.0,

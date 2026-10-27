@@ -242,8 +242,8 @@ pub fn build_scene_parts(
         if pin.achse == "y" {
             // Durch die Hoehe: vom Bauch nach oben, hoechstens bis zur Angel
             let (unten, oben) = crate::geometry::kontur_hoehe(geo, pin.x_mm);
-            let tang_dort = crate::geometry::angel_breite(blank, pin.x_mm);
-            let y_ende = if tang_dort > 0.02 { -tang_dort } else { oben };
+            let tang_dort = crate::geometry::angel_unten(blank, params, pin.x_mm);
+            let y_ende = tang_dort.unwrap_or(oben);
             parts.push(Part {
                 mesh: crate::mesh::zylinder_y(
                     pin.x_mm,

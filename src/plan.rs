@@ -108,7 +108,7 @@ impl DesignPlan {
             de(b.blade_width_mm, 0),
             de(b.blade_thickness_mm, 1),
             de(b.tang_length_mm, 0),
-            de(b.tang_width_mm, 1),
+            de(crate::geometry::angel_hoehe_am_heft(b, p), 1),
             de(b.tang_thickness_mm, 1),
             b.tang_style.label()
         ));
@@ -290,9 +290,9 @@ impl DesignPlan {
         let mut steps: Vec<String> = Vec::new();
 
         steps.push(format!(
-            "Rohling aufarbeiten: Angel auf {} Breite und {} Dicke bringen, \
+            "Rohling aufarbeiten: Angel auf {} Höhe und {} Dicke bringen, \
              Heft sauber entgraten.",
-            de_mm(b.tang_width_mm, 1),
+            de_mm(crate::geometry::angel_hoehe_am_heft(b, p), 1),
             de_mm(b.tang_thickness_mm, 1)
         ));
         if p.style == HandleStyle::PartialTangBolster {
@@ -410,10 +410,19 @@ pub fn estimate_weight(
     let tang_area = crate::geometry::polygon_area(&geo.tang_profile);
 
     // Holz: zwei Schalen bzw. ein Block
+    //
+    // Die Angel sitzt in einer Tasche im Holz - dort fehlt das Holz. Die
+    // Tasche ist so tief wie die Angel dick, der Rest der Schale bleibt.
+    let holz_ohne_tasche = outline_area * geo.scale_thickness_mm;
+    let holz_in_der_tasche = tang_area * blank.tang_thickness_mm;
     let wood_mm3 = if params.style.has_two_scales() {
-        outline_area * geo.scale_thickness_mm * 2.0
-    } else {
+        (holz_ohne_tasche - holz_in_der_tasche) * 2.0
+    } else if params.style == crate::model::HandleStyle::PartialTangBolster {
+        // Bei der Bastion liegt die Angel im Metall - das Holz ist massiv.
         outline_area * geo.total_thickness_mm
+    } else {
+        // Ein-Stueck und Zwinge: ein Block mit der Nut fuer die Angel.
+        outline_area * geo.total_thickness_mm - holz_in_der_tasche
     };
     let wood_cm3 = wood_mm3 / 1000.0;
     let wood_g = wood_cm3 * material.density;
@@ -494,7 +503,7 @@ pub fn build_bohrplan_pdf(plan: &DesignPlan) -> Pdf {
         8.0,
         &format!(
             "Angel {} × {} mm, Länge {} mm | Schalendicke {} | Griff {} × {} mm",
-            de(b.tang_width_mm, 1),
+            de(crate::geometry::angel_hoehe_am_heft(b, p), 1),
             de(b.tang_thickness_mm, 1),
             de(b.tang_length_mm, 1),
             de_mm(g.scale_thickness_mm, 1),
@@ -560,8 +569,8 @@ pub fn build_bohrplan_pdf(plan: &DesignPlan) -> Pdf {
             // Kanten dargestellt.
             let r = pin.dia_mm / 2.0;
             let (unten, oben) = crate::geometry::kontur_hoehe(g, pin.x_mm);
-            let tang_dort = crate::geometry::angel_breite(b, pin.x_mm);
-            let y_ende = if tang_dort > 0.02 { -tang_dort } else { oben };
+            let tang_dort = crate::geometry::angel_unten(b, p, pin.x_mm);
+            let y_ende = tang_dort.unwrap_or(oben);
             pdf.set_stroke(0.78, 0.16, 0.16);
             pdf.set_line_width(0.5);
             pdf.set_dash(&[2.0, 1.5]);
@@ -660,8 +669,8 @@ pub fn build_bohrplan_pdf(plan: &DesignPlan) -> Pdf {
         let by = 48.0;
         let bw = 60.0;
         let bh = 60.0;
-        let mut min_y = cs.tang_half_width;
-        let mut max_y = -cs.tang_half_width;
+        let mut min_y = cs.tang_unten;
+        let mut max_y = cs.tang_oben;
         let mut min_z = cs.tang_half_thickness;
         let mut max_z = -cs.tang_half_thickness;
         for (z, v) in cs
@@ -697,13 +706,12 @@ pub fn build_bohrplan_pdf(plan: &DesignPlan) -> Pdf {
         pdf.set_stroke(0.45, 0.48, 0.53);
         pdf.set_line_width(0.4);
         let th = cs.tang_half_thickness;
-        let w = cs.tang_half_width;
         pdf.polyline(
             &[
-                map(w, -th),
-                map(w, th),
-                map(-w, th),
-                map(-w, -th),
+                map(cs.tang_oben, -th),
+                map(cs.tang_oben, th),
+                map(cs.tang_unten, th),
+                map(cs.tang_unten, -th),
             ],
             true,
         );
@@ -777,7 +785,10 @@ pub fn build_bauplan_pdf_mit(
         ("Klingenbreite am Heft", de_mm(b.blade_width_mm, 1)),
         ("Klingendicke", de_mm(b.blade_thickness_mm, 1)),
         ("Angel", format!("{} lang", de_mm(b.tang_length_mm, 1))),
-        ("Angelbreite", de_mm(b.tang_width_mm, 1)),
+        (
+            "Angelhöhe am Heft",
+            de_mm(crate::geometry::angel_hoehe_am_heft(b, p), 1),
+        ),
         ("Angeldicke", de_mm(b.tang_thickness_mm, 1)),
         ("Grifflänge", de_mm(g.handle_length_mm, 1)),
         ("Griffhöhe", de_mm(g.handle_height_mm, 1)),
@@ -981,7 +992,7 @@ pub fn build_schablone_pdf(plan: &DesignPlan) -> Pdf {
             "{} - {} | Maßstab 1:1 | Angel {} × {} mm, {} mm lang",
             style_name(p.style),
             plan.verdict.material_name,
-            de(b.tang_width_mm, 1),
+            de(crate::geometry::angel_hoehe_am_heft(b, p), 1),
             de(b.tang_thickness_mm, 1),
             de(b.tang_length_mm, 0)
         ),

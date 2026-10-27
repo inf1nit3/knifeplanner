@@ -149,7 +149,7 @@ pub struct BladeAnalysis {
     pub edge_offset_mm: Option<f64>,
 
     /// Verhaeltnisse - aus einem Foto deutlich verlaesslicher als Absolutwerte.
-    /// tang_width_ratio   = Angelbreite / Klingenueberhoehe am Heft
+    /// tang_width_ratio   = Hoehe des Stahls am Heft / Hoehe der Klinge am Heft
     /// tang_thickness_ratio = Angeldicke / Klingendicke
     /// tang_length_ratio  = Angel-Laenge / Klingenlaenge
     /// tang_center_ratio  = Lage der Angelmitte zwischen Ruecken (0) und Schneide (1)
@@ -435,7 +435,7 @@ WICHTIG - Masse und Verhaeltnisse:
   Setze die absoluten Felder auf null, wenn kein Lineal, keine Kreditkarte oder
   sonst ein bekanntes Referenzmass neben dem Rohling liegt.
 - Die Verhaeltnisfelder sind dann die verlaessliche Angabe und IMMER auszufuellen:
-    tang_width_ratio     = Breite der Angel / Hoehe der Klinge am Heft
+    tang_width_ratio     = Hoehe des Stahls am Heft (Angelbreite im Seitenbild) / Hoehe der Klinge am Heft
     tang_thickness_ratio = Dicke der Angel / Dicke der Klinge
     tang_length_ratio    = Laenge der Angel hinter dem Heft / Laenge der Klinge
     tang_center_ratio    = Lage der Angelmitte zwischen Ruecken (0.0) und Schneide (1.0)

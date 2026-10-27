@@ -201,8 +201,8 @@ pub fn sammle_daten(plan: &DesignPlan, blank: &BladeBlank, params: &HandleParams
                 if pin.achse == "y" {
                     // Durch die Hoehe: vom Bauch bis unter die Angel
                     let (unten, oben) = crate::geometry::kontur_hoehe(g, pin.x_mm);
-                    let tang_dort = crate::geometry::angel_breite(blank, pin.x_mm);
-                    let y_ende = if tang_dort > 0.02 { -tang_dort } else { oben };
+                    let tang_dort = crate::geometry::angel_unten(blank, params, pin.x_mm);
+                    let y_ende = tang_dort.unwrap_or(oben);
                     lanyard_hoehe.push((r, pin.x_mm, unten - 0.5, y_ende));
                 } else {
                     lanyard_dicke.push((r, pin.x_mm, pin.y_mm));
@@ -445,6 +445,11 @@ pub fn makro(
         out.push_str(&format!("namen.append('Griffschale {}')\n", i + 1));
     }
     out.push_str("App.Console.PrintMessage('KP_LOFT %d ms\\n' % ((time.time() - start) * 1000))\n");
+    // Das Holzvolumen vor den Bohrungen festhalten. Das eigene Netz der
+    // App rechnet die Bohrungen nicht aus dem Holz heraus - sonst waeren
+    // die beiden Modelle nicht vergleichbar. Der Export enthaelt die
+    // Bohrungen trotzdem.
+    out.push_str("holzvolumen = sum(t.Volume for t in teile)\n");
 
     // --- Klinge ---
     out.push_str("\n# --- Klinge ---\n");
@@ -565,10 +570,7 @@ pub fn makro(
     out.push_str("    volumen += t.Volume\n");
     out.push_str("    App.Console.PrintMessage('KP %s: %d Flaechen, gueltig=%s, Volumen %.1f mm3\\n' % (namen[i], len(t.Faces), t.isValid(), t.Volume))\n");
     out.push_str("App.Console.PrintMessage('KP_GESAMT %.1f\\n' % volumen)\n");
-    out.push_str(&format!(
-        "App.Console.PrintMessage('KP_HOLZ %.1f\\n' % sum(t.Volume for t in teile[:{}]))\n",
-        daten.ringe.len()
-    ));
+    out.push_str("App.Console.PrintMessage('KP_HOLZ %.1f\\n' % holzvolumen)\n");
     out.push_str(&format!(
         "verbund.exportStep('{}')\n",
         python_pfad(step_ziel)

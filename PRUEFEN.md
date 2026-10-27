@@ -108,7 +108,7 @@ Angelform besser, wenn sie vollständig im Bild ist.
 | Prüfpunkt | Erwartung |
 |---|---|
 | Maße | plausibel für deinen Rohling, **keine 0-Werte** |
-| Verhältnisse | `tang_width_ratio` zwischen 0,2 und 0,4 |
+| Verhältnisse | `tang_width_ratio` = Höhe des Stahls am Heft / Höhe der Klinge am Heft — bei einer durchgehenden Angel nahe 1,0, bei einem verdeckten Ansatz etwa 0,2 bis 0,4 |
 | `notes` | nennt die Unsicherheit, wenn kein Maßstab im Bild ist |
 | Material | Kategorie und Art passen, Vorschlagsliste passt zum Material |
 
@@ -249,48 +249,55 @@ sein (inklusive Material, Querschnitt und Kameraeinstellung).
   Nut der Angel nicht — dafür müsste ihr Loch die Form der Angel haben.
 * Bohrungen erscheinen **nur in der 3D-Ansicht** als rote Zylinder, im STL
   gehören nur die echten Bauteile hinein.
+* Die **Tasche für die Angel** ist in beiden 3D-Modellen (eigenes Netz und
+  FreeCAD) durchgehend, real ist sie so tief wie die Angel dick (4,5 mm) —
+  im Holz bleibt also eine Klebefläche. Für den Zuschnitt und die
+  Gewichtsangabe wird die Tasche richtig gerechnet, im Netz ist sie
+  durchgehend.
 
-### 5.1 Angel und Klinge passen noch nicht zusammen (wichtig)
+### 5.1 Angel und Klinge: die durchgehende Angel (ab 0.3.0)
 
-Beim Standardrohrling ist die **Angel 6,5 mm hoch**, die **Klinge am Heft
-26,0 mm**. Die Angel setzt die Klingenkontur also nicht fort: der Stahl ragt
-je 9,8 mm über die Angel hinaus und die Klinge hängt nur an einem schmalen
-Streifen. Ein Griff mit dem Namen „Full Tang" sieht damit nicht aus wie ein
-Full Tang.
+Bis 0.2.x war die Angel im Modell **6,5 mm hoch**, die Klinge am Heft aber
+**26,0 mm**. Die Angel setzte die Klingenkontur also nicht fort: der Stahl
+ragte je 9,8 mm über die Angel hinaus und die Klinge hing nur an einem
+schmalen Streifen. Ein Griff mit dem Namen „Full Tang" sah damit nicht aus
+wie ein Full Tang.
 
-Nachgemessen im 3D-Modell (Standardmaß, Bauart *Full Tang, zwei Griffschalen*):
+**Seit 0.3.0 ist das behoben.** Die Angel nimmt die Höhe der Klinge am Heft
+an und verjüngt sich nach hinten auf eine Spitze. Nachgemessen im 3D-Modell
+(Standardmaß, Bauart *Full Tang, zwei Griffschalen*):
 
 | Teil | y (Höhe) | z (Dicke) |
 |---|---|---|
 | Klinge | −13,0 … +13,0 (26,0 mm) | −2,25 … +2,25 (4,5 mm) |
-| Angel | −3,25 … +3,25 (6,5 mm) | −2,25 … +2,25 (4,5 mm) |
-| Griffschalen | −16,0 … +13,0 | ±2,25 … ±11,0 |
+| Angel | −13,0 … +13,0 (26,0 mm) | −2,25 … +2,25 (4,5 mm) |
+| Griffschalen | −16,0 … +15,0 | ±2,25 … ±11,0 |
 
-**Was das Programm jetzt tut:** Beim Bauen des Plans prüft es die Angel gegen
-die Klinge und schreibt eine Warnung in den Plan (App, Bauplan-PDF,
-Bohrplan-PDF und Textplan):
+Der Griff ist dadurch 2 mm höher (31 mm statt 29 mm): über und unter der
+Angel bleiben 2,0 mm bzw. 3,0 mm Holz, damit der Stahl nirgends aus dem
+Griff herausragt.
 
-> Die Angel ist nur 6,5 mm hoch, die Klinge am Heft 26,0 mm: der Stahl ragt je
-> 9,8 mm über die Angel hinaus …
+**Prüfen:**
 
-**Der eigentliche Fix** (als eigenes Vorhaben, nicht in dieser Runde gemacht):
-Die Angel muss die Höhe der Klinge am Heft übernehmen und zur Spitze hin
-verjüngt werden. Das ist kein reiner Zahlenwechsel, weil drei Stellen mit
-den Annahmen „schmale Angel" arbeiten:
+1. *2 – Rohling* → *Angel-Breite* steht auf **0** = automatisch = Klingenhöhe
+   am Heft.
+2. Der Bohrplan zeigt die Angel (grün gestrichelt) über die volle Griffhöhe,
+   am Heft bündig mit der Klingenkontur.
+3. Der Querschnitt meldet *Wand 2,0 / 3,0 mm* — über und unter der Angel
+   bleibt Holz.
+4. *3 – Griff* → *Ein-Stück-Griff*: dort steht die **Angelhöhe am Heft** bei
+   6,5 mm (der verdeckte Ansatz), der Regler *Verdeckter Ansatz* ist nur bei
+   dieser Bauart sichtbar.
 
-1. Die **Angelform** wäre asymmetrisch (Rücken 13 mm, Schneide 13 mm) — heute
-   ist sie symmetrisch um die Mittellinie.
-2. Das **Holz** läge dann vorn nur noch als schmale Leiste über und unter der
-   Angel (2 mm Wandstärke). Dass dabei rundum Holz bleibt, ist jetzt
-   eingebaut: Griffkontur, Bastion und Zwinge wachsen mit der Angel mit
-   (geprüft für Angelbreiten von 3 bis 26 mm — vorher stand der Stahl bei der
-   Bastion ab 20 mm Angel aus dem Holz heraus).
-3. Beim **Ein-Stück-Griff** ist eine durchgehende Angel gar nicht möglich —
-   dort muss der Absatz der Klinge auf die Angelhöhe geschliffen werden
-   (verdeckter Ansatz). Das Modell bildet die Klinge heute immer in voller
-   Höhe ab.
+**Ein Rohling mit abgesetztem Heft** (Choil, Parierstich) bekommt über
+*Angel-Breite* einen eigenen Wert; der Stahl sitzt dann mittig auf der
+Mittellinie der Klinge, ragt aber über die Angel hinaus. Das Programm
+schreibt dann die Warnung in den Plan:
 
-**Prüfen, ob der Hinweis greift:** Im Tab *2 – Rohling* die *Angel-Breite* auf
-26,0 mm stellen. Die Schalen passen sich an, der Querschnitt bleibt gültig,
-und die Warnung verschwindet. Für die Bastion und den Ein-Stück-Griff ist die
-schmale Angel gewollt — dort bleibt der Hinweis weg.
+> Die Angel ist nur 14,0 mm hoch, die Klinge am Heft 26,0 mm: der Stahl ragt
+> je 6,0 mm über die Angel hinaus …
+
+**Noch offen:** Beim Ein-Stück-Griff muss der **Absatz der Klinge** auf die
+Höhe des verdeckten Ansatzes geschliffen werden — das Modell bildet die
+Klinge immer in voller Höhe ab. Wer einen Ein-Stück-Griff baut, muss die
+Klinge also selbst auf 6,5 mm am Heft bringen.

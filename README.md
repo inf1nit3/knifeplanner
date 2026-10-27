@@ -182,12 +182,23 @@ Bei zwei Griffschalen ist die Angel aus **Stahl** — das Holz sind nur die
 beiden Schalen, die Dicke entspricht also zwei Schalendicken, nicht der
 Gesamtdicke des Griffes.
 
+Die Angel ist so hoch wie die **Klinge am Heft**: der Stahl läuft ohne Absatz
+aus der Klinge in den Griff und verjüngt sich nach hinten auf eine Spitze.
+Das ist der Normalfall einer durchgehenden Angel und der Standard im
+Programm. Ein Rohling mit abgesetztem Heft (Choil, Parierstich) bekommt über
+*Angel-Breite* einen eigenen Wert; 0 heißt „so hoch wie die Klinge".
+
 Das Programm prüft dabei auch die **Angel gegen die Klinge**: Ist die Angel
 am Heft deutlich niedriger als die Klinge, ragt der Stahl über die Angel
 hinaus und die Klinge hängt nur an einem schmalen Streifen. Der Plan schreibt
 dann einen Hinweis in die App und in alle Dokumente (Bohrplan, Bauplan,
-Textplan) — mit den genauen Maßen und der Empfehlung, die Angel-Breite auf
-die Höhe der Klinge zu setzen.
+Textplan) — mit den genauen Maßen und der Empfehlung, die Angel-Breite auf 0
+zu stellen.
+
+Beim **Ein-Stück-Griff** ist das anders: In ein Stück Holz passt keine
+durchgehende Angel. Dort rechnet das Programm mit einem kurzen **verdeckten
+Ansatz** (eigener Regler), der in einer Tasche im Holz steckt — der Absatz
+der Klinge muss auf diese Höhe geschliffen werden.
 
 ### Druckschablone 1:1
 

@@ -299,24 +299,40 @@ pub fn offset(poly: &[Point], delta: f64) -> Vec<Point> {
         let mut vx = mx * delta * miter;
         let mut vy = my * delta * miter;
 
-        // Der Gehrungspunkt darf nicht ueber den Nachbarn hinausragen.
-        // Sonst klappt die Kontur an der Ecke um sich selbst - die
-        // versetzte Kante laeuft dann rueckwaerts und ueberlappt die
-        // naechste. Solche Kanten fallen im Rechnen weg, der Punkt wird
-        // stattdessen auf die Kante zurueckgezogen.
-        for (ax, ay, bx, by) in [(px, py, cx, cy), (cx, cy, nx, ny)] {
-            let (dx, dy) = (bx - ax, by - ay);
+        // Der Gehrungspunkt darf nicht ueber die Nachbarn hinausragen.
+        // Sonst klappt die Kontur an der Ecke um sich selbst: die versetzte
+        // Kante laeuft rueckwaerts und der Eckpunkt liegt auf der
+        // Nachbarkante. Die Gehrung wird deshalb auf dem Winkelhalbierenden
+        // gekuerzt - der Punkt bleibt auf der Innenseite. Ein Zurueckziehen
+        // waere falsch, das dreht den Punkt auf die falsche Seite.
+        {
+            // Die Kante davor: der Punkt darf nicht ueber den vorherigen
+            // Punkt hinaus nach hinten ruecken.
+            let (dx, dy) = (cx - px, cy - py);
             let len = (dx * dx + dy * dy).sqrt();
-            if len < 1e-9 {
-                continue;
+            if len > 1e-9 {
+                let (ux, uy) = (dx / len, dy / len);
+                let vor = vx * ux + vy * uy;
+                if vor < -len * 0.999 {
+                    let f = (-len * 0.999) / vor;
+                    vx *= f;
+                    vy *= f;
+                }
             }
-            let (ux, uy) = (dx / len, dy / len);
-            let vor = vx * ux + vy * uy;
-            let quer = -vx * uy + vy * ux;
-            if vor < -len * 0.999 {
-                // Auf die Kante zurueckziehen, der Anteil quer bleibt
-                vx = ux * (-len * 0.999) - uy * quer;
-                vy = uy * (-len * 0.999) + ux * quer;
+        }
+        {
+            // Die Kante danach: der Punkt darf nicht ueber den naechsten
+            // Punkt hinaus nach vorn springen.
+            let (dx, dy) = (nx - cx, ny - cy);
+            let len = (dx * dx + dy * dy).sqrt();
+            if len > 1e-9 {
+                let (ux, uy) = (dx / len, dy / len);
+                let vor = vx * ux + vy * uy;
+                if vor > len * 0.999 {
+                    let f = (len * 0.999) / vor;
+                    vx *= f;
+                    vy *= f;
+                }
             }
         }
         out.push((cx + vx, cy + vy));

@@ -136,7 +136,7 @@ pub fn build_svg(
         ),
         format!(
             "Angel: {:.1} x {:.1} mm, Laenge {:.1} mm | Schalendicke {:.1} mm | Gesamt {:.1} mm",
-            blank.tang_width_mm,
+            crate::geometry::angel_hoehe_am_heft(blank, params),
             blank.tang_thickness_mm,
             blank.tang_length_mm,
             geo.scale_thickness_mm,

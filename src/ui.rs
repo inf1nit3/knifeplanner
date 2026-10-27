@@ -602,7 +602,13 @@ impl App {
                 changed |= drag_row(ui, "Klingendicke", &mut self.blank.blade_thickness_mm, 1.0..=8.0);
                 ui.separator();
                 changed |= drag_row(ui, "Angel-Länge", &mut self.blank.tang_length_mm, 40.0..=220.0);
-                changed |= drag_row(ui, "Angel-Breite", &mut self.blank.tang_width_mm, 1.0..=20.0);
+                changed |= drag_row(ui, "Angel-Breite", &mut self.blank.tang_width_mm, 0.0..=60.0);
+                if self.blank.tang_width_mm <= 0.0 {
+                    ui.small(
+                        "Angel-Breite 0 = automatisch: die Angel ist so hoch wie die Klinge \
+                         am Heft, der Stahl geht ohne Absatz in den Griff.",
+                    );
+                }
                 changed |= drag_row(ui, "Angel-Dicke", &mut self.blank.tang_thickness_mm, 1.0..=20.0);
 
                 egui::ComboBox::from_id_salt("tang_style")
@@ -666,6 +672,20 @@ impl App {
                                 .changed();
                         }
                     });
+
+                // Beim Ein-Stueck-Griff steckt nur ein kurzer Ansatz im Holz.
+                if self.params.style == HandleStyle::OnePiece {
+                    changed |= drag_row(
+                        ui,
+                        "Verdeckter Ansatz",
+                        &mut self.params.hidden_tang_height_mm,
+                        2.0..=20.0,
+                    );
+                    ui.small(
+                        "Höhe des Stahlstücks in der Tasche. Der Absatz der Klinge wird auf \
+                         diese Höhe geschliffen.",
+                    );
+                }
 
                 egui::ComboBox::from_id_salt("hand")
                     .selected_text(self.params.hand_size.label())
@@ -2100,8 +2120,8 @@ impl App {
         painter.rect_filled(rect, 6.0, egui::Color32::from_rgb(252, 251, 248));
 
         // Koordinatenbereich aus dem Querschnitt
-        let mut min_y = section.tang_half_width.min(-section.tang_half_width);
-        let mut max_y = section.tang_half_width;
+        let mut min_y = section.tang_unten;
+        let mut max_y = section.tang_oben;
         let mut min_z = -section.tang_half_thickness;
         let mut max_z = section.tang_half_thickness;
         for (z, v) in section
@@ -2130,14 +2150,13 @@ impl App {
         };
 
         // Die Angel
-        let w = section.tang_half_width;
         let th = section.tang_half_thickness;
         painter.add(egui::Shape::convex_polygon(
             vec![
-                to_screen(w, -th),
-                to_screen(w, th),
-                to_screen(-w, th),
-                to_screen(-w, -th),
+                to_screen(section.tang_oben, -th),
+                to_screen(section.tang_oben, th),
+                to_screen(section.tang_unten, th),
+                to_screen(section.tang_unten, -th),
             ],
             egui::Color32::from_rgb(150, 156, 166),
             egui::Stroke::new(1.2, egui::Color32::from_rgb(60, 66, 76)),
@@ -2192,7 +2211,11 @@ impl App {
                 ui.label(format!("{wall_belly:.1} mm"));
                 ui.end_row();
                 ui.label("Angel");
-                ui.label(format!("{:.1} x {:.1} mm", w * 2.0, b.tang_thickness_mm));
+                ui.label(format!(
+                    "{:.1} x {:.1} mm",
+                    section.tang_oben - section.tang_unten,
+                    b.tang_thickness_mm
+                ));
                 ui.end_row();
             });
 
