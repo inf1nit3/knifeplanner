@@ -770,7 +770,7 @@ pub fn build_bauplan_pdf_mit(
         crate::geometry::zuschnitt(&g.outline, p, g.scale_thickness_mm, g.total_thickness_mm);
 
     let mut y = 52.0;
-    pdf.text(15.0, y, 12.0, "Rohling und Masse", true);
+    pdf.text(15.0, y, 12.0, "Rohling und Maße", true);
     y += 12.0;
     let rows = vec![
         ("Klingenlänge", de_mm(b.blade_length_mm, 1)),
