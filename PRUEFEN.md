@@ -21,7 +21,7 @@ API-Schlüssel hinterlegt ist — einen echten Bildanalyse-Aufruf.
 Erwartet wird:
 
 ```
-10 Pruefpunkte bestanden, 0 fehlgeschlagen
+14 Pruefpunkte bestanden, 0 fehlgeschlagen
 ```
 
 Der Bericht liegt danach in `pruefbericht\selbsttest.txt`, die erzeugten
@@ -249,3 +249,48 @@ sein (inklusive Material, Querschnitt und Kameraeinstellung).
   Nut der Angel nicht — dafür müsste ihr Loch die Form der Angel haben.
 * Bohrungen erscheinen **nur in der 3D-Ansicht** als rote Zylinder, im STL
   gehören nur die echten Bauteile hinein.
+
+### 5.1 Angel und Klinge passen noch nicht zusammen (wichtig)
+
+Beim Standardrohrling ist die **Angel 6,5 mm hoch**, die **Klinge am Heft
+26,0 mm**. Die Angel setzt die Klingenkontur also nicht fort: der Stahl ragt
+je 9,8 mm über die Angel hinaus und die Klinge hängt nur an einem schmalen
+Streifen. Ein Griff mit dem Namen „Full Tang" sieht damit nicht aus wie ein
+Full Tang.
+
+Nachgemessen im 3D-Modell (Standardmaß, Bauart *Full Tang, zwei Griffschalen*):
+
+| Teil | y (Höhe) | z (Dicke) |
+|---|---|---|
+| Klinge | −13,0 … +13,0 (26,0 mm) | −2,25 … +2,25 (4,5 mm) |
+| Angel | −3,25 … +3,25 (6,5 mm) | −2,25 … +2,25 (4,5 mm) |
+| Griffschalen | −16,0 … +13,0 | ±2,25 … ±11,0 |
+
+**Was das Programm jetzt tut:** Beim Bauen des Plans prüft es die Angel gegen
+die Klinge und schreibt eine Warnung in den Plan (App, Bauplan-PDF,
+Bohrplan-PDF und Textplan):
+
+> Die Angel ist nur 6,5 mm hoch, die Klinge am Heft 26,0 mm: der Stahl ragt je
+> 9,8 mm über die Angel hinaus …
+
+**Der eigentliche Fix** (als eigenes Vorhaben, nicht in dieser Runde gemacht):
+Die Angel muss die Höhe der Klinge am Heft übernehmen und zur Spitze hin
+verjüngt werden. Das ist kein reiner Zahlenwechsel, weil drei Stellen mit
+den Annahmen „schmale Angel" arbeiten:
+
+1. Die **Angelform** wäre asymmetrisch (Rücken 13 mm, Schneide 13 mm) — heute
+   ist sie symmetrisch um die Mittellinie.
+2. Das **Holz** läge dann vorn nur noch als schmale Leiste über und unter der
+   Angel (2 mm Wandstärke). Dass dabei rundum Holz bleibt, ist jetzt
+   eingebaut: Griffkontur, Bastion und Zwinge wachsen mit der Angel mit
+   (geprüft für Angelbreiten von 3 bis 26 mm — vorher stand der Stahl bei der
+   Bastion ab 20 mm Angel aus dem Holz heraus).
+3. Beim **Ein-Stück-Griff** ist eine durchgehende Angel gar nicht möglich —
+   dort muss der Absatz der Klinge auf die Angelhöhe geschliffen werden
+   (verdeckter Ansatz). Das Modell bildet die Klinge heute immer in voller
+   Höhe ab.
+
+**Prüfen, ob der Hinweis greift:** Im Tab *2 – Rohling* die *Angel-Breite* auf
+26,0 mm stellen. Die Schalen passen sich an, der Querschnitt bleibt gültig,
+und die Warnung verschwindet. Für die Bastion und den Ein-Stück-Griff ist die
+schmale Angel gewollt — dort bleibt der Hinweis weg.

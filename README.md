@@ -182,6 +182,13 @@ Bei zwei Griffschalen ist die Angel aus **Stahl** — das Holz sind nur die
 beiden Schalen, die Dicke entspricht also zwei Schalendicken, nicht der
 Gesamtdicke des Griffes.
 
+Das Programm prüft dabei auch die **Angel gegen die Klinge**: Ist die Angel
+am Heft deutlich niedriger als die Klinge, ragt der Stahl über die Angel
+hinaus und die Klinge hängt nur an einem schmalen Streifen. Der Plan schreibt
+dann einen Hinweis in die App und in alle Dokumente (Bohrplan, Bauplan,
+Textplan) — mit den genauen Maßen und der Empfehlung, die Angel-Breite auf
+die Höhe der Klinge zu setzen.
+
 ### Druckschablone 1:1
 
 Der Export schreibt zusätzlich eine **Druckschablone im Maßstab 1:1**
@@ -189,7 +196,7 @@ Der Export schreibt zusätzlich eine **Druckschablone im Maßstab 1:1**
 gelegt:
 
 - beide Griffschalen spiegelbildlich, mit 12 mm Abstand zum Beschnitt
-- die Angel und ihre Frassbahn grün gestrichelt
+- die Angel und ihre Fräsbahn grün gestrichelt
 - alle Bohrungen als Kreis mit Fadenkreuz und Nummer
 - die Vorderkante des Rohlings rot markiert — dort wird die Schablone
   ausgerichtet
@@ -322,7 +329,7 @@ Skizze, sondern die Konstruktion:
   für die Darstellung großzügiger als der Fertigungswert).
 - **Die Angel** sitzt bündig zwischen den Schalen, der Spalt ist sichtbar.
 - **Bastion oder Zwinge** als eigener Metallkörper.
-- **Die Aussparung** für die Angel liegt als Frassbahn bei.
+- **Die Aussparung** für die Angel liegt als Fräsbahn bei.
 - **Beim Ein-Stück-Griff** ist die Nut für die Angel in den Boden gefräst und
   die Angel liegt sichtbar darin.
 - **Die Bohrungen** erscheinen als rote Zylinder – man sieht direkt, wie die

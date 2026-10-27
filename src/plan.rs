@@ -5,6 +5,7 @@ use crate::export::pdf::Pdf;
 use crate::geometry::{build_geometry, recommend_style};
 use crate::materials::{self, MaterialVerdict};
 use crate::model::{BladeBlank, HandleGeometry, HandleParams, HandleStyle};
+use crate::text::{de, de_mm};
 use crate::vision::{BladeAnalysis, MaterialAnalysis};
 
 #[derive(Clone, Debug)]
@@ -95,39 +96,47 @@ impl DesignPlan {
             " (mit Schleif- und Hobelzugabe)"
         };
         out.push_str(&format!(
-            "Zuschnitt:  Holzleiste {:.0} x {:.0} x {:.0} mm{}\n",
-            z_laenge, z_hoehe, z_dicke, zusatz
+            "Zuschnitt:  Holzleiste {} × {} × {} mm{}\n",
+            de(z_laenge, 0),
+            de(z_hoehe, 0),
+            de(z_dicke, 0),
+            zusatz
         ));
         out.push_str(&format!(
-            "Rohling:    Klinke {:.0} x {:.0} x {:.1} mm, Angel {:.1} x {:.1} x {:.0} mm ({})\n",
-            b.blade_length_mm,
-            b.blade_width_mm,
-            b.blade_thickness_mm,
-            b.tang_length_mm,
-            b.tang_width_mm,
-            b.tang_thickness_mm,
+            "Rohling:    Klinge {} × {} × {} mm, Angel {} × {} × {} mm ({})\n",
+            de(b.blade_length_mm, 0),
+            de(b.blade_width_mm, 0),
+            de(b.blade_thickness_mm, 1),
+            de(b.tang_length_mm, 0),
+            de(b.tang_width_mm, 1),
+            de(b.tang_thickness_mm, 1),
             b.tang_style.label()
         ));
         out.push_str(&format!(
-            "Griff:      {:.0} mm lang, {:.0} mm hoch, {:.1} mm dick, Schalendicke {:.1} mm\n",
-            g.handle_length_mm, g.handle_height_mm, g.total_thickness_mm, g.scale_thickness_mm
+            "Griff:      {} lang, {} hoch, {} dick, Schalendicke {}\n",
+            de_mm(g.handle_length_mm, 0),
+            de_mm(g.handle_height_mm, 0),
+            de_mm(g.total_thickness_mm, 1),
+            de_mm(g.scale_thickness_mm, 1)
         ));
         out.push_str(&format!(
-            "Querschnitt: {} - Ruecken {:.1} mm, Bauch {:.1} mm, Laengsgrat {:.1} mm, \
-             Verjuengung {:.1} mm\n",
+            "Querschnitt: {} - Rücken {} mm, Bauch {} mm, Längsgrat {} mm, \
+             Verjüngung {} mm\n",
             p.section.shape.label(),
-            p.section.spine_round_mm,
-            p.section.belly_round_mm,
-            p.section.keel_mm,
-            p.section.taper_mm
+            de_mm(p.section.spine_round_mm, 1),
+            de_mm(p.section.belly_round_mm, 1),
+            de_mm(p.section.keel_mm, 1),
+            de_mm(p.section.taper_mm, 1)
         ));
         out.push_str(&format!(
             "Profil:     {}\n",
             match p.profile {
                 crate::model::ProfileStyle::Blade => "folgt dem Heftprofil des Rohlings".to_string(),
                 crate::model::ProfileStyle::Ergonomic => format!(
-                    "eigenes Ergonomieprofil, Griffhöhe {:.0} mm, Fingerkehle {:.1} mm, Ballenauflage {:.1} mm",
-                    p.grip_height_mm, p.finger_groove_mm, p.belly_drop_mm
+                    "eigenes Ergonomieprofil, Griffhöhe {} mm, Fingerkehle {} mm, Ballenauflage {} mm",
+                    de(p.grip_height_mm, 0),
+                    de(p.finger_groove_mm, 1),
+                    de(p.belly_drop_mm, 1)
                 ),
             }
         ));
@@ -137,7 +146,7 @@ impl DesignPlan {
         out.push_str(&"-".repeat(64));
         out.push('\n');
         for (k, val) in &g.metrics {
-            out.push_str(&format!("  {k:<26} {val:>8.1}\n"));
+            out.push_str(&format!("  {k:<26} {:>8}\n", de(*val, 1)));
         }
         out.push('\n');
 
@@ -154,15 +163,18 @@ impl DesignPlan {
                 "tang" => "Querbolzen in die Angel",
                 _ => {
                     if pin.achse == "y" {
-                        "Lanyardloch durch die Hoehe"
+                        "Lanyardloch durch die Höhe"
                     } else {
                         "Lanyardloch quer durch die Dicke"
                     }
                 }
             };
             out.push_str(&format!(
-                "  {:<22} {:>8.1} {:>7.1}  {}\n",
-                pin.label, pin.x_mm, pin.dia_mm, art
+                "  {:<22} {:>8} {:>7}  {}\n",
+                pin.label,
+                de(pin.x_mm, 1),
+                de(pin.dia_mm, 1),
+                art
             ));
             out.push_str(&format!("      {}\n", pin.rationale));
         }
@@ -210,7 +222,7 @@ impl DesignPlan {
             }
             if let Some(defects) = &a.defects {
                 if !defects.is_empty() {
-                    out.push_str(&format!("    Auffaelligkeiten: {}\n", defects.join(", ")));
+                    out.push_str(&format!("    Auffälligkeiten: {}\n", defects.join(", ")));
                 }
             }
             if let Some(n) = &a.notes {
@@ -242,7 +254,7 @@ impl DesignPlan {
         out.push('\n');
 
         if !datenblaetter.is_empty() {
-            out.push_str("DATENBLAETTER\n");
+            out.push_str("DATENBLÄTTER\n");
             out.push_str(&"-".repeat(64));
             out.push('\n');
             for d in datenblaetter {
@@ -278,13 +290,14 @@ impl DesignPlan {
         let mut steps: Vec<String> = Vec::new();
 
         steps.push(format!(
-            "Rohling aufarbeiten: Angel auf {:.1} mm Breite und {:.1} mm Dicke bringen, \
+            "Rohling aufarbeiten: Angel auf {} Breite und {} Dicke bringen, \
              Heft sauber entgraten.",
-            b.tang_width_mm, b.tang_thickness_mm
+            de_mm(b.tang_width_mm, 1),
+            de_mm(b.tang_thickness_mm, 1)
         ));
         if p.style == HandleStyle::PartialTangBolster {
             steps.push(
-                "Bastion anpassen und mit der Angel verschweissen - Schweissnaht planieren, \
+                "Bastion anpassen und mit der Angel verschweißen - Schweißnaht planieren, \
                  damit keine Spalte zwischen Bastion und Angel entsteht."
                     .to_string(),
             );
@@ -297,11 +310,11 @@ impl DesignPlan {
             );
         }
         steps.push(format!(
-            "Material auswaehlen und im Block besorgen - mindestens {:.0} x {:.0} x {:.1} mm, \
-             inklusive{zugabe} fuer den Beschnitt.",
-            g.handle_length_mm + 10.0,
-            g.handle_height_mm + 8.0,
-            g.scale_thickness_mm + 2.0,
+            "Material auswählen und im Block besorgen - mindestens {} × {} × {}, \
+             inklusive{zugabe} für den Beschnitt.",
+            de_mm(g.handle_length_mm + 10.0, 0),
+            de_mm(g.handle_height_mm + 8.0, 0),
+            de_mm(g.scale_thickness_mm + 2.0, 1),
             zugabe = if g.scale_thickness_mm > 4.0 { " 2 mm" } else { " 1 mm" }
         ));
         steps.push("Material konditionieren: mehrere Tage bei Raumtemperatur lagern, \
@@ -309,23 +322,26 @@ impl DesignPlan {
             .to_string());
         steps.push(format!(
             "Griffschale(n) zuschneiden - Kontur aus dem DXF (Layer SCHALE), \
-             Schalendicke {:.1} mm.",
-            g.scale_thickness_mm
+             Schalendicke {}.",
+            de_mm(g.scale_thickness_mm, 1)
         ));
         steps.push(format!(
-            "Aussparung fuer die Angel fräsen: Nut {:.1} mm tief (Angel + {:.2} mm Spalt), \
+            "Aussparung für die Angel fräsen: Nut {} tief (Angel + {} Spalt), \
              Kontur aus dem DXF (Layer AUSSPA).",
-            b.tang_thickness_mm + p.glue_gap_mm,
-            p.glue_gap_mm
+            de_mm(b.tang_thickness_mm + p.glue_gap_mm, 1),
+            de_mm(p.glue_gap_mm, 2)
         ));
         steps.push(format!(
             "Bohrungen setzen nach der Bohrplan-Tabelle, Vorsteckbohrungen mit \
-             Ø {:.1} mm, Reibnieten mit Ø 2,4 mm halbtief.",
-            g.pins
-                .iter()
-                .find(|x| x.kind == "through")
-                .map(|x| x.dia_mm)
-                .unwrap_or(3.5)
+             Ø {}, Reibnieten mit Ø 2,4 mm halbtief.",
+            de_mm(
+                g.pins
+                    .iter()
+                    .find(|x| x.kind == "through")
+                    .map(|x| x.dia_mm)
+                    .unwrap_or(3.5),
+                1
+            )
         ));
         steps.push("Kanten abrunden: umlaufend etwa {:.1} mm, danach die \
                     Vorderkante anschrägen."
@@ -343,7 +359,7 @@ impl DesignPlan {
                     Bolzen testen, Kanten nachschleifen."
             .to_string());
         steps.push(format!(
-            "Finish: {} auftragen, zwischen den Oelgaengen 24 Stunden trocknen lassen.",
+            "Finish: {} auftragen, zwischen den Ölgängen 24 Stunden trocknen lassen.",
             self.verdict.finish
         ));
         steps
@@ -373,11 +389,11 @@ impl Weight {
     }
     pub fn note(&self) -> String {
         format!(
-            "Griff rund {:.0} g (Holz {:.0} g, Stahl {:.0} g, Metall {:.0} g). {}",
-            self.total_g(),
-            self.wood_g,
-            self.steel_g,
-            self.metal_g,
+            "Griff rund {} g (Holz {} g, Stahl {} g, Metall {} g). {}",
+            de(self.total_g(), 0),
+            de(self.wood_g, 0),
+            de(self.steel_g, 0),
+            de(self.metal_g, 0),
             self.balance_note
         )
     }
@@ -477,13 +493,13 @@ pub fn build_bohrplan_pdf(plan: &DesignPlan) -> Pdf {
         30.0,
         8.0,
         &format!(
-            "Angel {:.1} x {:.1} mm, Laenge {:.1} mm | Schalendicke {:.1} mm | Griff {:.0} x {:.0} mm",
-            b.tang_width_mm,
-            b.tang_thickness_mm,
-            b.tang_length_mm,
-            g.scale_thickness_mm,
-            g.handle_length_mm,
-            g.handle_height_mm
+            "Angel {} × {} mm, Länge {} mm | Schalendicke {} | Griff {} × {} mm",
+            de(b.tang_width_mm, 1),
+            de(b.tang_thickness_mm, 1),
+            de(b.tang_length_mm, 1),
+            de_mm(g.scale_thickness_mm, 1),
+            de(g.handle_length_mm, 0),
+            de(g.handle_height_mm, 0)
         ),
         false,
     );
@@ -590,16 +606,19 @@ pub fn build_bohrplan_pdf(plan: &DesignPlan) -> Pdf {
     pdf.text(15.0, draw_y + draw_h + 12.0, 7.5, "Legende", true);
     let mut ly = draw_y + draw_h + 17.0;
     pdf.set_fill(0.12, 0.48, 0.25);
-    pdf.text(15.0, ly, 7.0, "gruen gestrichelt: Angel mit Aussparung", false);
+    pdf.text(15.0, ly, 7.0, "grün gestrichelt: Angel mit Aussparung", false);
     ly += 4.0;
     pdf.set_fill(0.78, 0.16, 0.16);
     pdf.text(15.0, ly, 7.0, "rote Kreise: Bohrungen, Nummern siehe Tabelle", false);
 
     // Tabelle der Bohrungen
-    let mut ty = draw_y + draw_h + 22.0;
+    //
+    // Der Abstand zur Legende muss gross genug sein: die Ueberschrift
+    // (11 pt) laeuft sonst in die letzte Zeile der Legende (7 pt).
+    let mut ty = draw_y + draw_h + 26.0;
     pdf.set_fill(0.0, 0.0, 0.0);
     pdf.text(15.0, ty, 11.0, "Bohrungen", true);
-    ty += 8.0;
+    ty += 9.0;
     pdf.set_fill(0.2, 0.2, 0.2);
     pdf.text(15.0, ty, 8.0, "Nr.", true);
     pdf.text(26.0, ty, 8.0, "Bezeichnung", true);
@@ -628,8 +647,8 @@ pub fn build_bohrplan_pdf(plan: &DesignPlan) -> Pdf {
         pdf.set_fill(0.0, 0.0, 0.0);
         pdf.text(15.0, ty, 8.0, &format!("{}", i + 1), true);
         pdf.text(26.0, ty, 8.0, &pin.label, false);
-        pdf.text(95.0, ty, 8.0, &format!("{:.1} mm", pin.x_mm), false);
-        pdf.text(125.0, ty, 8.0, &format!("{:.1} mm", pin.dia_mm), false);
+        pdf.text(95.0, ty, 8.0, &de_mm(pin.x_mm, 1), false);
+        pdf.text(125.0, ty, 8.0, &de_mm(pin.dia_mm, 1), false);
         pdf.text(150.0, ty, 8.0, art, false);
         ty += 5.0;
     }
@@ -694,8 +713,11 @@ pub fn build_bohrplan_pdf(plan: &DesignPlan) -> Pdf {
             by + bh + 3.0,
             7.0,
             &format!(
-                "bei {:.0} mm | Hoehe {:.1} | Wand {:.1} / {:.1} mm",
-                x_mitte, cs.height, cs.wall_spine, cs.wall_belly
+                "bei {} mm | Höhe {} | Wand {} / {} mm",
+                de(x_mitte, 0),
+                de(cs.height, 1),
+                de(cs.wall_spine, 1),
+                de(cs.wall_belly, 1)
             ),
             false,
         );
@@ -708,14 +730,14 @@ pub fn build_bohrplan_pdf(plan: &DesignPlan) -> Pdf {
         ty,
         8.0,
         &format!(
-            "Aussparung: {:.1} mm tief (Angel + Spalt) | Kantenabrundung {:.1} mm",
-            b.tang_thickness_mm + p.glue_gap_mm,
-            p.edge_break_mm
+            "Aussparung: {} tief (Angel + Spalt) | Kantenabrundung {}",
+            de_mm(b.tang_thickness_mm + p.glue_gap_mm, 1),
+            de_mm(p.edge_break_mm, 1)
         ),
         false,
     );
     ty += 7.0;
-    for w in g.warnings.iter().take(3) {
+    for w in g.warnings.iter().take(4) {
         ty = pdf.text_block(15.0, ty, 7.5, 180.0, &format!("! {w}"), false, 4.0);
     }
 
@@ -751,17 +773,25 @@ pub fn build_bauplan_pdf_mit(
     pdf.text(15.0, y, 12.0, "Rohling und Masse", true);
     y += 12.0;
     let rows = vec![
-        ("Klingenlaenge", format!("{:.1} mm", b.blade_length_mm)),
-        ("Klingenbreite am Heft", format!("{:.1} mm", b.blade_width_mm)),
-        ("Klingendicke", format!("{:.1} mm", b.blade_thickness_mm)),
-        ("Angel", format!("{:.1} mm lang", b.tang_length_mm)),
-        ("Angelbreite", format!("{:.1} mm", b.tang_width_mm)),
-        ("Angeldicke", format!("{:.1} mm", b.tang_thickness_mm)),
-        ("Grifffaenge", format!("{:.1} mm", g.handle_length_mm)),
-        ("Griffhoehe", format!("{:.1} mm", g.handle_height_mm)),
-        ("Gesamtdicke", format!("{:.1} mm", g.total_thickness_mm)),
-        ("Schalendicke", format!("{:.1} mm", g.scale_thickness_mm)),
-        ("Zuschnitt Holz", format!("{:.0} x {:.0} x {:.0} mm", z_laenge, z_hoehe, z_dicke)),
+        ("Klingenlänge", de_mm(b.blade_length_mm, 1)),
+        ("Klingenbreite am Heft", de_mm(b.blade_width_mm, 1)),
+        ("Klingendicke", de_mm(b.blade_thickness_mm, 1)),
+        ("Angel", format!("{} lang", de_mm(b.tang_length_mm, 1))),
+        ("Angelbreite", de_mm(b.tang_width_mm, 1)),
+        ("Angeldicke", de_mm(b.tang_thickness_mm, 1)),
+        ("Grifflänge", de_mm(g.handle_length_mm, 1)),
+        ("Griffhöhe", de_mm(g.handle_height_mm, 1)),
+        ("Gesamtdicke", de_mm(g.total_thickness_mm, 1)),
+        ("Schalendicke", de_mm(g.scale_thickness_mm, 1)),
+        (
+            "Zuschnitt Holz",
+            format!(
+                "{} × {} × {} mm",
+                de(z_laenge, 0),
+                de(z_hoehe, 0),
+                de(z_dicke, 0)
+            ),
+        ),
     ];
     for (k, val) in rows {
         pdf.set_fill(0.1, 0.1, 0.1);
@@ -806,7 +836,7 @@ pub fn build_bauplan_pdf_mit(
             25.0,
             y,
             9.0,
-            &format!("bei {:.1} mm, Ø {:.1} mm", pin.x_mm, pin.dia_mm),
+            &format!("bei {}, Ø {}", de_mm(pin.x_mm, 1), de_mm(pin.dia_mm, 1)),
             false,
         );
         y += 5.5;
@@ -831,7 +861,7 @@ pub fn build_bauplan_pdf_mit(
         y += 8.0;
         if !datenblaetter.is_empty() {
             pdf.set_fill(0.0, 0.0, 0.0);
-            pdf.text(15.0, y, 12.0, "Datenblaetter", true);
+            pdf.text(15.0, y, 12.0, "Datenblätter", true);
             y += 10.0;
             for d in datenblaetter {
                 y = pdf.text_block(15.0, y, 9.0, 180.0, &format!("- {}", d.name), false, 5.5);
@@ -873,14 +903,14 @@ mod datenblatt_tests {
             },
         ];
         let text = plan().report_text_mit(&blaetter);
-        assert!(text.contains("DATENBLAETTER"), "{text}");
+        assert!(text.contains("DATENBLÄTTER"), "{text}");
         assert!(text.contains("Stahl 1.2316"), "{text}");
         assert!(text.contains("2316.pdf"), "{text}");
         assert!(text.contains("haerte.txt"), "{text}");
 
         // Ohne Datenblaetter steht kein Abschnitt drin
         let ohne = plan().report_text();
-        assert!(!ohne.contains("DATENBLAETTER"), "{ohne}");
+        assert!(!ohne.contains("DATENBLÄTTER"), "{ohne}");
     }
 
     #[test]
@@ -948,12 +978,12 @@ pub fn build_schablone_pdf(plan: &DesignPlan) -> Pdf {
         23.0,
         9.0,
         &format!(
-            "{} - {} | Massstab 1:1 | Angel {:.1} x {:.1} mm, {} mm lang",
+            "{} - {} | Maßstab 1:1 | Angel {} × {} mm, {} mm lang",
             style_name(p.style),
             plan.verdict.material_name,
-            b.tang_width_mm,
-            b.tang_thickness_mm,
-            b.tang_length_mm
+            de(b.tang_width_mm, 1),
+            de(b.tang_thickness_mm, 1),
+            de(b.tang_length_mm, 0)
         ),
         false,
     );
@@ -972,7 +1002,12 @@ pub fn build_schablone_pdf(plan: &DesignPlan) -> Pdf {
         15.0,
         35.0,
         8.5,
-        &format!("Zuschnitt: Holzleiste {:.0} x {:.0} x {:.0} mm", z_laenge, z_hoehe, z_dicke),
+        &format!(
+            "Zuschnitt: Holzleiste {} × {} × {} mm",
+            de(z_laenge, 0),
+            de(z_hoehe, 0),
+            de(z_dicke, 0)
+        ),
         false,
     );
 
@@ -1060,8 +1095,8 @@ pub fn build_schablone_pdf(plan: &DesignPlan) -> Pdf {
         pdf.set_fill(0.0, 0.0, 0.0);
         pdf.text(15.0, y, 8.0, &format!("{}", i + 1), true);
         pdf.text(30.0, y, 8.0, &pin.label, false);
-        pdf.text(105.0, y, 8.0, &format!("{:.1} mm", pin.x_mm), false);
-        pdf.text(135.0, y, 8.0, &format!("{:.1} mm", pin.dia_mm), false);
+        pdf.text(105.0, y, 8.0, &de_mm(pin.x_mm, 1), false);
+        pdf.text(135.0, y, 8.0, &de_mm(pin.dia_mm, 1), false);
         pdf.text(160.0, y, 8.0, art, false);
         y += 5.0;
     }
@@ -1073,8 +1108,8 @@ pub fn build_schablone_pdf(plan: &DesignPlan) -> Pdf {
     y += 9.0;
     let hinweise = [
         "Die Schablone an der Vorderkante des Rohlings ausrichten und festkleben.",
-        "Vor dem Bohben die 100-mm-Linie pruefen, dann stimmen alle Masse.",
-        "Die gruen gestrichelte Angel liegt mittig im Holz - die Bohrungen gehen durch die Angel.",
+        "Vor dem Bohren die 100-mm-Linie prüfen, dann stimmen alle Maße.",
+        "Die grün gestrichelte Angel liegt mittig im Holz - die Bohrungen gehen durch die Angel.",
         "Bei zwei Schalen: beide Konturen sind spiegelbildlich, es sind zwei gleiche Schalen.",
     ];
     for h in hinweise {

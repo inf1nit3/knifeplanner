@@ -17,6 +17,7 @@ pub mod project;
 pub mod render3d;
 pub mod selftest;
 pub mod settings;
+pub mod text;
 pub mod update;
 pub mod vision;
 

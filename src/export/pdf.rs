@@ -257,6 +257,14 @@ impl Pdf {
                 "q\n{:.3} {:.3} {:.3} RG\n{:.3} w\n{}Q\n",
                 0.0, 0.0, 0.0, 0.3, page.ops
             );
+            // Der Inhaltsstrom wird als Latin-1 geschrieben: die Schrift
+            // ist auf WinAnsiEncoding gestellt, dort ist ein Umlaut genau
+            // ein Byte (0xE4 = ae). Als UTF-8 waeren es zwei Bytes und die
+            // PDF-Viewer zeigten "grÃ¤n".
+            let content_bytes: Vec<u8> = content
+                .chars()
+                .map(|c| if (c as u32) < 256 { c as u8 } else { b'?' })
+                .collect();
             // Das Seitenobjekt bekommt die Nummer objects.len() + 1,
             // der Inhaltsstrom darunter objects.len() + 2.
             let content_obj = objects.len() + 2;
@@ -270,8 +278,8 @@ impl Pdf {
                 )
                 .into_bytes(),
             );
-            let mut stream = format!("<< /Length {} >>\nstream\n", content.len()).into_bytes();
-            stream.extend_from_slice(content.as_bytes());
+            let mut stream = format!("<< /Length {} >>\nstream\n", content_bytes.len()).into_bytes();
+            stream.extend_from_slice(&content_bytes);
             stream.extend_from_slice(b"\nendstream");
             objects.push(stream);
         }
@@ -310,6 +318,12 @@ fn escape_text(s: &str) -> String {
                 out.push('\\');
                 out.push(c);
             }
+            // Typografische Zeichen, die es in WinAnsi nicht gibt, werden
+            // auf ihre naechstliegende Entsprechung gebracht.
+            '\u{2013}' | '\u{2014}' => out.push('-'),
+            '\u{2018}' | '\u{2019}' => out.push('\''),
+            '\u{201c}' | '\u{201d}' => out.push('"'),
+            '\u{00a0}' => out.push(' '),
             c if (c as u32) < 256 => out.push(c as u8 as char),
             _ => out.push('?'),
         }

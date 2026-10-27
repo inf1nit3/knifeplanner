@@ -9,6 +9,7 @@ use crate::model::{
     BladeBlank, ButtStyle, HandleGeometry, HandleParams, HandleStyle, PinSpec, ProfileStyle,
     SectionShape, SectionSpec,
 };
+use crate::text::de_mm;
 
 pub type Point = (f64, f64);
 
@@ -238,6 +239,31 @@ fn grip_growth(b: &BladeBlank, p: &HandleParams) -> f64 {
     ((p.grip_height_mm - front_height) / 2.0).max(0.0)
 }
 
+/// Die Rueckenlinie mit der Wand um die Angel herum.
+///
+/// Ist die Angel hoeher als der Ruecken des Rohlings, muss der Griff
+/// mitwachsen - sonst steht der Stahl aus dem Holz heraus. Bastion,
+/// Zwinge und die Kurven fuer die Komfortrundung nehmen dieselbe Linie,
+/// damit kein Absatz zwischen den Bauteilen entsteht.
+fn spine_mit_wand(b: &BladeBlank, p: &HandleParams, x: f64, x_end: f64) -> f64 {
+    let w = tang_half_width(b, x);
+    if w <= 0.0 {
+        return spine_curve(b, p, x, x_end);
+    }
+    let wall = p.wall_min_mm.max(0.8);
+    spine_curve(b, p, x, x_end).max(w + wall)
+}
+
+/// Die Bauchlinie mit der Wand um die Angel herum.
+fn bauch_mit_wand(b: &BladeBlank, p: &HandleParams, x: f64, x_end: f64) -> f64 {
+    let w = tang_half_width(b, x);
+    if w <= 0.0 {
+        return belly_curve(b, p, x, x_end);
+    }
+    let wall = p.wall_min_mm.max(0.8);
+    belly_curve(b, p, x, x_end).min(-(w + wall))
+}
+
 /// Glockenkurve: 0 an den Raendern, 1 in der Mitte bei `center`.
 fn bell(t: f64, center: f64, width: f64) -> f64 {
     let d = ((t - center) / width.max(1e-6)).abs();
@@ -296,23 +322,16 @@ pub fn build_outline(b: &BladeBlank, p: &HandleParams) -> (Vec<Point>, Vec<Strin
     let mut bots: Vec<f64> = xs.iter().map(|&x| belly_curve(b, p, x, x_end)).collect();
 
     // Wandstaerke garantieren: Abstand Angel <-> Aussenkontur >= wall_min
-    let wall = p.wall_min_mm.max(0.8);
     for (i, &x) in xs.iter().enumerate() {
-        let w = tang_half_width(b, x);
-        if w > 0.0 {
-            tops[i] = tops[i].max(w + wall);
-            bots[i] = bots[i].min(-(w + wall));
-        }
+        tops[i] = spine_mit_wand(b, p, x, x_end);
+        bots[i] = bauch_mit_wand(b, p, x, x_end);
     }
 
     tops = smooth(&tops, 5);
     bots = smooth(&bots, 5);
     for (i, &x) in xs.iter().enumerate() {
-        let w = tang_half_width(b, x);
-        if w > 0.0 {
-            tops[i] = tops[i].max(w + wall);
-            bots[i] = bots[i].min(-(w + wall));
-        }
+        tops[i] = spine_mit_wand(b, p, x, x_end);
+        bots[i] = bauch_mit_wand(b, p, x, x_end);
     }
     tops = smooth_max(&tops, 3);
     bots = smooth_min(&bots, 3);
@@ -349,11 +368,12 @@ pub fn build_outline(b: &BladeBlank, p: &HandleParams) -> (Vec<Point>, Vec<Strin
         }
     }
 
+    let wall = p.wall_min_mm.max(0.8);
     if b.tang_half_width() + wall > b.spine_offset_mm.min(b.edge_offset_mm.abs()) {
         warnings.push(
-            "Die Angel ist breiter als das Heftprofil zulaesst - die Griffkontur muss \
-             aufweiten. Eine Bastion oder eine Aenderung der Rohlinggeometrie ist noetig, \
-             sonst steht die Griffkontur ueber dem Heft vor."
+            "Die Angel ist breiter als das Heftprofil zulässt - die Griffkontur muss \
+             aufweiten. Eine Bastion oder eine Änderung der Rohlinggeometrie ist nötig, \
+             sonst steht die Griffkontur über dem Heft vor."
                 .to_string(),
         );
     }
@@ -566,8 +586,10 @@ pub fn bolster_profile(b: &BladeBlank, p: &HandleParams) -> Vec<Point> {
     let x1 = w;
     let y_top0 = b.spine_offset_mm;
     let y_bot0 = -b.edge_offset_mm.abs();
-    let y_top1 = spine_curve(b, p, x1, b.tang_length_mm);
-    let y_bot1 = belly_curve(b, p, x1, b.tang_length_mm);
+    // Die Hinterkante folgt dem Holz - mit der Wand um die Angel herum.
+    // Sonst entstuende zwischen Bastion und Holz ein Absatz.
+    let y_top1 = spine_mit_wand(b, p, x1, b.tang_length_mm);
+    let y_bot1 = bauch_mit_wand(b, p, x1, b.tang_length_mm);
     vec![
         (0.0, y_top0),
         (x1, y_top1),
@@ -588,11 +610,11 @@ pub fn ferrule_profile(b: &BladeBlank, p: &HandleParams) -> Vec<Point> {
     pts.push((0.0, b.spine_offset_mm));
     for i in 0..=steps {
         let x = w * i as f64 / steps as f64;
-        pts.push((x, spine_curve(b, p, x, b.tang_length_mm)));
+        pts.push((x, spine_mit_wand(b, p, x, b.tang_length_mm)));
     }
     for i in (0..=steps).rev() {
         let x = w * i as f64 / steps as f64;
-        pts.push((x, belly_curve(b, p, x, b.tang_length_mm)));
+        pts.push((x, bauch_mit_wand(b, p, x, b.tang_length_mm)));
     }
     pts
 }
@@ -766,9 +788,10 @@ pub fn build_geometry(b: &BladeBlank, p: &HandleParams) -> HandleGeometry {
 
     if scale_t <= 2.6 && p.style.has_two_scales() {
         warnings.push(format!(
-            "Die Schalendicke liegt bei nur {scale_t:.1} mm. Unter 2,6 mm reisst Holz beim \
+            "Die Schalendicke liegt bei nur {}. Unter 2,6 mm reißt Holz beim \
              Anziehen der Vorsteckbolzen aus - dickeres Holz oder Epoxy- und Reibnieten-\
-             Verbindung waehlen."
+             Verbindung wählen.",
+            de_mm(scale_t, 1)
         ));
     }
 
@@ -776,10 +799,39 @@ pub fn build_geometry(b: &BladeBlank, p: &HandleParams) -> HandleGeometry {
     let wood_outside = scale_t - b.tang_thickness_mm - p.glue_gap_mm;
     if p.style.has_two_scales() && wood_outside < 1.5 {
         warnings.push(format!(
-            "Ausserhalb der Angel bleiben nur {wood_outside:.1} mm Holz. Unter 1,5 mm ist die \
-             Schale zu schwach - schmalere Angel, duenneres Holz oder Epoxy- statt Stift-\
-             verbindung in Betracht ziehen."
+            "Außerhalb der Angel bleiben nur {} Holz. Unter 1,5 mm ist die \
+             Schale zu schwach - schmalere Angel, dünneres Holz oder Epoxy- statt Stift-\
+             verbindung in Betracht ziehen.",
+            de_mm(wood_outside, 1)
         ));
+    }
+
+    // Die Angel muss die Klinge am Heft aufnehmen.
+    //
+    // Die Klinge ist am Heft so hoch wie der Rohling, die Angel läuft im
+    // Griff weiter. Ist die Angel deutlich niedriger als die Klinge, ragt
+    // der Stahl über die Angel hinaus - die Klinge hängt dann nur an einem
+    // schmalen Streifen. Bei zwei Schalen und bei der Zwinge ist das ein
+    // Fehler; bei Bastion und Ein-Stück-Griff ist eine schmale Angel
+    // gewollt, weil sie im Metall bzw. als Nase im Holz liegt.
+    let klingen_hoehe = b.spine_offset_mm + b.edge_offset_mm.abs();
+    let angel_hoehe = 2.0 * tang_half_width(b, 0.0);
+    let angel_durch_holz = p.style.has_two_scales() || p.style == HandleStyle::Ferrule;
+    if angel_durch_holz && klingen_hoehe - angel_hoehe > 1.0 {
+        let ueberhang = (klingen_hoehe - angel_hoehe) / 2.0;
+        warnings.insert(
+            0,
+            format!(
+                "Die Angel ist nur {} hoch, die Klinge am Heft {}: der Stahl ragt je {} über \
+                 die Angel hinaus, die Klinge hängt nur an einem schmalen Streifen. Für eine \
+                 durchgehende Angel die Angel-Breite auf {} setzen - der Griff passt sich dann \
+                 an.",
+                de_mm(angel_hoehe, 1),
+                de_mm(klingen_hoehe, 1),
+                de_mm(ueberhang, 1),
+                de_mm(klingen_hoehe, 1)
+            ),
+        );
     }
 
     let pins = plan_pins(b, p);
@@ -816,40 +868,42 @@ pub fn build_geometry(b: &BladeBlank, p: &HandleParams) -> HandleGeometry {
     // Der Griff reicht ueber die Angel hinaus
     if length > b.tang_length_mm + 3.0 {
         warnings.push(format!(
-            "Der Griff reicht {:.0} mm ueber die Angel hinaus. Dahinter haelt nur noch der \
+            "Der Griff reicht {} über die Angel hinaus. Dahinter hält nur noch der \
              Kleber die Schalen zusammen - das ist die Bauart eines Partial Tangs. Ein \
-             laengerer Rohling waere robuster, die Angel laeuft dann bis zum Griffende.",
-            length - b.tang_length_mm
+             längerer Rohling wäre robuster, die Angel läuft dann bis zum Griffende.",
+            de_mm(length - b.tang_length_mm, 0)
         ));
     }
 
     let grip_len = length - wood_start;
     if grip_len < 85.0 {
         warnings.push(format!(
-            "Der nutzbare Griffriff misst nur {grip_len:.0} mm. Das ist kurz - fuer ein \
-             Jagdmesser mit ganzer Hand zu knapp."
+            "Der nutzbare Griffriff misst nur {}. Das ist kurz - für ein \
+             Jagdmesser mit ganzer Hand zu knapp.",
+            de_mm(grip_len, 0)
         ));
     } else if grip_len > 145.0 {
         warnings.push(format!(
-            "Der Griff ist mit {grip_len:.0} mm laenger als bei den meisten Messern. \
-             Ganzschalengriff an den Haenden abgleichen."
+            "Der Griff ist mit {} länger als bei den meisten Messern. \
+             Ganzschalengriff an den Händen abgleichen.",
+            de_mm(grip_len, 0)
         ));
     }
 
     match p.style {
         HandleStyle::FullTangTwoScale => notes.push(
-            "Full Tang: die Angel laeuft durch den gesamten Griff. Beide Griffschalen sind \
-             spiegelbildlich, die Bohrungen fuer die Vorsteckbolzen gehen durch die Angel."
+            "Full Tang: die Angel läuft durch den gesamten Griff. Beide Griffschalen sind \
+             spiegelbildlich, die Bohrungen für die Vorsteckbolzen gehen durch die Angel."
                 .into(),
         ),
         HandleStyle::PartialTangBolster => notes.push(
-            "Partial Tang mit Bastion: die Bastion ueberbrueckt den vorderen Griffteil. Die \
-             Bastion wird mit der Angel verschweisst, der Holzteil wird mit Reibnieten und \
+            "Partial Tang mit Bastion: die Bastion überbrückt den vorderen Griffteil. Die \
+             Bastion wird mit der Angel verschweißt, der Holzteil wird mit Reibnieten und \
              Epoxy fixiert."
                 .into(),
         ),
         HandleStyle::OnePiece => notes.push(
-            "Ein-Stueck-Griff: die Angel wird als Nut in das Holz eingelassen. Nut mit \
+            "Ein-Stück-Griff: die Angel wird als Nut in das Holz eingelassen. Nut mit \
              0,03 - 0,05 mm Spiel, sonst klebt das Holz an der Angel fest und spannt beim \
              Trocknen."
                 .into(),
@@ -958,6 +1012,60 @@ mod tests {
             edge_offset_mm: 7.5,
             ..Default::default()
         }
+    }
+
+    #[test]
+    fn die_angel_steckt_nie_aus_dem_holz() {
+        // Rund um die Angel muss Holz bleiben - bei jeder Bauart und jeder
+        // Angelbreite. Sonst steht der Stahl aus dem Griff heraus.
+        for tang_w in [3.0_f64, 6.5, 12.0, 20.0, 26.0] {
+            for style in [
+                HandleStyle::FullTangTwoScale,
+                HandleStyle::PartialTangBolster,
+                HandleStyle::OnePiece,
+                HandleStyle::Ferrule,
+            ] {
+                let mut b = BladeBlank::default();
+                b.tang_width_mm = tang_w;
+                let mut p = HandleParams::default();
+                p.style = style;
+                let geo = build_geometry(&b, &p);
+                let x = geo.handle_length_mm * 0.45;
+                if let Some(cs) = cross_section(&geo, &b, x) {
+                    assert!(
+                        cs.wall_spine > 0.0 && cs.wall_belly > 0.0,
+                        "{style:?} bei {tang_w} mm Angel: Wand {}/{} mm",
+                        cs.wall_spine,
+                        cs.wall_belly
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn schmale_angel_wird_gemahnt() {
+        // Der Rohling mit 26 mm Klingenhoehe und 6,5 mm Angel ist der
+        // Standardfall: die Angel nimmt die Klinge nicht auf. Das muss
+        // im Plan stehen.
+        let b = BladeBlank::default();
+        let p = HandleParams::default();
+        let g = build_geometry(&b, &p);
+        assert!(
+            g.warnings.iter().any(|w| w.contains("Angel ist nur")),
+            "Es fehlt der Hinweis auf die zu schmale Angel: {:?}",
+            g.warnings
+        );
+
+        // Mit der Angel in der Hoehe der Klinge verschwindet der Hinweis.
+        let mut b2 = BladeBlank::default();
+        b2.tang_width_mm = b2.spine_offset_mm + b2.edge_offset_mm.abs();
+        let g2 = build_geometry(&b2, &p);
+        assert!(
+            !g2.warnings.iter().any(|w| w.contains("Angel ist nur")),
+            "Der Hinweis muss verschwinden: {:?}",
+            g2.warnings
+        );
     }
 
     #[test]
@@ -1091,7 +1199,7 @@ mod tests {
             g.handle_length_mm
         );
         assert!(
-            g.warnings.iter().any(|w| w.contains("ueber die Angel hinaus")),
+            g.warnings.iter().any(|w| w.contains("über die Angel hinaus")),
             "Es muss auf den Partial Tang hinweisen: {:?}",
             g.warnings
         );
@@ -1406,11 +1514,13 @@ pub fn body_rings(
 
     // Die Wand um die Angel herum: die Komfortrundung darf sie nicht
     // auffressen, sonst steht die Angel aus dem Holz heraus. Das gilt
-    // nur dort, wo die Angel in der Kontur liegt (Ein-Stueck-Griff) -
-    // bei zwei Schalen sitzt die Angel in der Fuge dazwischen.
+    // ueberall dort, wo die Angel im Holz liegt - bei der Bastion ohne
+    // Nut, beim Ein-Stueck- und beim Zwingengriff mit Nut. Bei zwei
+    // Schalen sitzt die Angel in der Fuge dazwischen.
     let wand_staerke = p.wall_min_mm.max(0.8);
     let (mut k_bauch, mut k_ruecken) = (1.0f64, 1.0f64);
-    if slot_path.is_some() {
+    let angel_im_holz = slot_path.is_some() || p.style == HandleStyle::PartialTangBolster;
+    if angel_im_holz {
         for &pt in outline.iter() {
             let x = pt.0;
             let w = tang_half_width(b, x);
@@ -1618,6 +1728,7 @@ fn translate_rings(rings: &[Ring], dz: f64) -> Vec<Vec<(f64, f64, f64)>> {
         .map(|ring| ring.iter().map(|&(x, y, z)| (x, y, z + dz)).collect())
         .collect()
 }
+
 
 #[cfg(test)]
 mod ring_tests {
@@ -1923,8 +2034,8 @@ pub fn profilkanten(
     let mut unten = Vec::new();
     for i in 0..=n {
         let x = x_start + span * i as f64 / n as f64;
-        oben.push((x, spine_curve(b, p, x, x_end)));
-        unten.push((x, belly_curve(b, p, x, x_end)));
+        oben.push((x, spine_mit_wand(b, p, x, x_end)));
+        unten.push((x, bauch_mit_wand(b, p, x, x_end)));
     }
     (oben, unten)
 }
@@ -1957,3 +2068,4 @@ mod zuschnitt_tests {
         assert!(dicke > 4.0, "Das Holz ist zu duenn: {dicke}");
     }
 }
+
