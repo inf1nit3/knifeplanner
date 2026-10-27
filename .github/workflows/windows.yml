@@ -1,0 +1,87 @@
+name: Build Windows
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: knifeplanner.exe (Windows 11)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust installieren
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add x86_64-pc-windows-msvc
+
+      - name: Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Tests
+        run: cargo test --release
+
+      - name: Bauen
+        run: cargo build --release --target x86_64-pc-windows-msvc
+
+      - name: Beispielplan erzeugen (Selbsttest)
+        shell: pwsh
+        run: |
+          $env:MINIMAX_API_KEY = ""
+          .\target\x86_64-pc-windows-msvc\release\knifeplanner.exe --demo
+          if (-not (Test-Path "export-demo\griff_fulltang_110_walnuss.dxf")) {
+            Write-Error "DXF wurde nicht erzeugt"
+            exit 1
+          }
+          Write-Host "Selbsttest ok"
+
+      - name: Paket schnüren
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item target\x86_64-pc-windows-msvc\release\knifeplanner.exe dist\
+          Copy-Item README.md dist\
+          Compress-Archive -Path dist\* -DestinationPath knifeplanner-windows.zip -Force
+          Write-Host "zip erstellt: knifeplanner-windows.zip"
+
+      - name: Artefakt hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: knifeplanner-windows
+          path: |
+            knifeplanner-windows.zip
+            dist/knifeplanner.exe
+          if-no-files-found: error
+
+  release:
+    name: Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: knifeplanner-windows
+          path: artifact
+      - uses: softprops/action-gh-release@v2
+        with:
+          # Die EXE einzeln dazu - der eingebaute Updater laedt sie
+          # direkt, ohne das ZIP auszupacken.
+          files: |
+            artifact/knifeplanner-windows.zip
+            artifact/dist/knifeplanner.exe
+          generate_release_notes: true

@@ -1,0 +1,18 @@
+# Zielgerichtete Flags fuer den Windows-Build.
+#
+#   cargo build --release --target x86_64-pc-windows-gnu
+#
+# erzeugt eine eigenstaendige knifeplanner.exe:
+#   - ohne Konsolenfenster (GUI-Subsystem)
+#   - ohne mitgelieferte Laufzeit-DLLs (statisch gelinkte CRT)
+
+[target.x86_64-pc-windows-gnu]
+rustflags = [
+    "-C", "target-feature=+crt-static",
+    "-C", "link-arg=-Wl,-subsystem=windows",
+]
+
+[target.x86_64-pc-windows-msvc]
+rustflags = [
+    "-C", "link-arg=/SUBSYSTEM:WINDOWS",
+]

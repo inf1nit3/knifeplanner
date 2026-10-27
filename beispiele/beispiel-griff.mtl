@@ -1,0 +1,40 @@
+newmtl material_0
+Ka 0.30 0.30 0.30
+Kd 0.450 0.300 0.200
+Ks 0.35 0.35 0.35
+Ns 48
+d 1.0
+illum 2
+
+newmtl material_1
+Ka 0.30 0.30 0.30
+Kd 0.450 0.300 0.200
+Ks 0.35 0.35 0.35
+Ns 48
+d 1.0
+illum 2
+
+newmtl material_2
+Ka 0.30 0.30 0.30
+Kd 0.580 0.600 0.640
+Ks 0.35 0.35 0.35
+Ns 48
+d 1.0
+illum 2
+
+newmtl material_3
+Ka 0.30 0.30 0.30
+Kd 0.580 0.600 0.640
+Ks 0.35 0.35 0.35
+Ns 48
+d 1.0
+illum 2
+
+newmtl material_4
+Ka 0.30 0.30 0.30
+Kd 0.250 0.250 0.280
+Ks 0.35 0.35 0.35
+Ns 48
+d 1.0
+illum 2
+

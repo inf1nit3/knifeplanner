@@ -1,0 +1,15 @@
+/target
+/dist
+/export
+/export-demo
+/freecad-out
+*.zip
+.DS_Store
+
+# Die erzeugten Plan-Dateien sind Ergebnisse, keine Quellen
+*.dxf
+*.stl
+
+# ... die Beispiele im Ordner beispiele/ aber schon
+!beispiele/*.dxf
+!beispiele/*.stl
