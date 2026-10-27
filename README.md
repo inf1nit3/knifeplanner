@@ -23,6 +23,11 @@ Materialtauglichkeit — und liefert einen baubaren Plan:
 
 ## 1. Bauen unter Windows 11
 
+> **Download:** Die fertigen Programme liegen als Release hier:
+> <https://github.com/inf1nit3/knifeplanner/releases> — dort gibt es das ZIP
+> mit allen Beispielen und die EXE einzeln (die braucht der eingebaute
+> Updater).
+
 ### Variante A — fertiges EXE (empfohlen)
 
 Ein Windows-Build läuft als GitHub-Action (siehe `.github/workflows/windows.yml`).
