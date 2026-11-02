@@ -254,6 +254,13 @@ sein (inklusive Material, Querschnitt und Kameraeinstellung).
   3D-Modellen allerdings durchgehend, real ist die Tasche so tief wie die
   Angel dick (4,5 mm). Für den Zuschnitt und die Gewichtsangabe wird die
   Tasche richtig gerechnet, im Netz nicht.
+  *Warum das nicht einfach ist:* Der Griffkoerper ist ein Loft über
+  Ringe, und ein Ring hat an jeder Stelle gleich viele Punkte. Eine
+  flache Nut braucht aber Ringe mit und ohne Nut — der Koerper muesste
+  also in Gruppen zerfallen. Dabei stellt sich die Komfortrundung in die
+  Wage: ihr Keil wird im FreeCAD-Modell als Schnitt gesetzt und muss zum
+  ganzen Koerper passen, sonst faellt zu viel Material weg. Beides
+  zusammen zu loesen ist der naechste Schritt, nicht eine Fleissarbeit.
 * Bei **zwei Griffschalen** gibt es **keine** Tasche: die Angel sitzt in der
   Fuge zwischen den Schalen, die Schalen liegen flach an ihr. Der Plan, der
   DXF und die Druckschablone weisen das auch so aus — im DXF ist der Layer
