@@ -173,7 +173,7 @@ pub fn build_parts(
 
     // Die Klinge selbst - sie sitzt vor dem Griff und setzt dessen
     // Kontur am Heft fort.
-    let klinge = crate::blade::klinge(blank);
+    let klinge = crate::blade::klinge(blank, crate::geometry::abschleifung(blank, params));
     if klinge.faces.len() > 3 {
         parts.push(Part {
             mesh: klinge,

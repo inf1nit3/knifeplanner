@@ -295,6 +295,14 @@ impl DesignPlan {
             de_mm(crate::geometry::angel_hoehe_am_heft(b, p), 1),
             de_mm(b.tang_thickness_mm, 1)
         ));
+        if p.style == crate::model::HandleStyle::OnePiece {
+            steps.push(format!(
+                "Absatz der Klinge schleifen: auf {} Höhe über {} - sonst passt die \
+                 Klinge nicht in die Tasche für den verdeckten Ansatz.",
+                de_mm(p.hidden_tang_height_mm, 1),
+                de_mm(p.heel_grind_mm, 1)
+            ));
+        }
         if p.style == HandleStyle::PartialTangBolster {
             steps.push(
                 "Bastion anpassen und mit der Angel verschweißen - Schweißnaht planieren, \
@@ -923,6 +931,23 @@ mod datenblatt_tests {
 
     fn plan() -> DesignPlan {
         DesignPlan::build(&BladeBlank::default(), &HandleParams::default(), "walnuss")
+    }
+
+    #[test]
+    fn der_ein_stueck_griff_nennt_die_schleifung() {
+        // Beim Ein-Stueck-Griff muss der Absatz der Klinge geschliffen
+        // werden - ohne diesen Hinweis passt die Klinge nicht in die
+        // Tasche fuer den verdeckten Ansatz.
+        let mut params = HandleParams::default();
+        params.style = crate::model::HandleStyle::OnePiece;
+        let ein_stueck = DesignPlan::build(&BladeBlank::default(), &params, "walnuss");
+        let text = ein_stueck.report_text_mit(&[]);
+        assert!(text.contains("Absatz der Klinge schleifen"), "{text}");
+        assert!(text.contains("6,5 mm"), "{text}");
+
+        // Bei zwei Schalen gibt es keinen Absatz und keinen Schleifhinweis.
+        let text2 = plan().report_text_mit(&[]);
+        assert!(!text2.contains("Absatz der Klinge schleifen"), "{text2}");
     }
 
     #[test]

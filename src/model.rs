@@ -311,6 +311,11 @@ pub fn standard_hidden_tang() -> f64 {
     6.5
 }
 
+/// Standardlaenge des am Heft geschliffenen Absatzes.
+pub fn standard_heel_grind() -> f64 {
+    12.0
+}
+
 /// Gestaltungsparameter des Griffs.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct HandleParams {
@@ -342,6 +347,13 @@ pub struct HandleParams {
     /// auf diese Hoehe geschliffen.
     #[serde(default = "standard_hidden_tang")]
     pub hidden_tang_height_mm: f64,
+
+    /// Laenge des am Heft geschliffenen Absatzes (nur beim Ein-Stueck).
+    ///
+    /// So weit muss die Klinge zurueckgeschliffen werden, bis sie in die
+    /// Tasche fuer den verdeckten Ansatz passt.
+    #[serde(default = "standard_heel_grind")]
+    pub heel_grind_mm: f64,
 
     pub edge_break_mm: f64,
     pub lanyard_hole: bool,
@@ -375,6 +387,7 @@ impl Default for HandleParams {
             bolster_width_mm: 18.0,
             ferrule_width_mm: 14.0,
             hidden_tang_height_mm: standard_hidden_tang(),
+            heel_grind_mm: standard_heel_grind(),
             edge_break_mm: 0.8,
             lanyard_hole: true,
             lanyard_hole_dia_mm: 5.0,

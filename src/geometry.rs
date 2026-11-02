@@ -150,6 +150,25 @@ fn tang_faktor(b: &BladeBlank, hoehe0: f64, x: f64) -> f64 {
     ((r * r - d * d).max(0.0)).sqrt() / h0
 }
 
+/// Der am Heft abzuschleifende Absatz der Klinge.
+///
+/// Nur beim Ein-Stueck-Griff: dort steckt ein verdeckter Ansatz im Holz,
+/// und die Klinge muss auf dessen Hoehe geschliffen werden. Sonst steht
+/// sie als dicker Stahlkeil vor dem Griff.
+pub fn abschleifung(
+    b: &BladeBlank,
+    p: &HandleParams,
+) -> Option<crate::blade::Abschleifung> {
+    if p.style != HandleStyle::OnePiece {
+        return None;
+    }
+    let klinge_hoehe = b.spine_offset_mm + b.edge_offset_mm.abs();
+    Some(crate::blade::Abschleifung {
+        hoehe_mm: p.hidden_tang_height_mm.min(klinge_hoehe),
+        laenge_mm: p.heel_grind_mm.max(0.0),
+    })
+}
+
 /// Die Angelform an der Stelle x: (oben, unten) in der Hoehenrichtung.
 ///
 /// None, wenn an dieser Stelle keine Angel mehr liegt.
@@ -1207,6 +1226,44 @@ mod tests {
     }
 
     #[test]
+    fn der_absatz_der_klinge_passt_in_die_tasche() {
+        // Beim Ein-Stueck-Griff wird die Klinge am Heft auf die Hoehe des
+        // verdeckten Ansatzes geschliffen - sonst steht sie als dicker
+        // Stahlkeil vor dem Griff.
+        let b = BladeBlank::default();
+        let mut p = HandleParams::default();
+        p.style = HandleStyle::OnePiece;
+        let a = abschleifung(&b, &p).expect("kein Absatz");
+        let stationen = crate::blade::stationen_oeffentlich(&b, Some(a));
+        let (x0, r0, s0) = stationen[0];
+        assert!(x0.abs() < 1e-9, "die erste Station sitzt nicht am Heft");
+        let hoehe = r0 - s0;
+        assert!(
+            (hoehe - p.hidden_tang_height_mm).abs() < 0.6,
+            "Die Klinge ist am Heft {} mm hoch, der Ansatz {} mm",
+            hoehe,
+            p.hidden_tang_height_mm
+        );
+
+        // Zwei Stationen weiter vorn ist die Klinge wieder voll hoech.
+        let weiter = stationen
+            .iter()
+            .find(|s| s.0 <= -(a.laenge_mm + 0.5))
+            .expect("keine Station hinter der Schleifung");
+        assert!(
+            (weiter.1 - weiter.2 - (b.spine_offset_mm + b.edge_offset_mm.abs())).abs() < 1.0,
+            "Die Klinge ist hinter dem Absatz nur {} mm hoch",
+            weiter.1 - weiter.2
+        );
+
+        // Bei zwei Schalen gibt es keinen Absatz - die Angel ist dort
+        // durchgehend.
+        let mut p2 = HandleParams::default();
+        p2.style = HandleStyle::FullTangTwoScale;
+        assert!(abschleifung(&b, &p2).is_none());
+    }
+
+    #[test]
     fn outline_respects_wall_thickness() {
         let b = default_blank();
         let p = HandleParams::default();
@@ -2204,5 +2261,6 @@ mod zuschnitt_tests {
         assert!(dicke > 4.0, "Das Holz ist zu duenn: {dicke}");
     }
 }
+
 
 

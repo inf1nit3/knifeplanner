@@ -308,7 +308,16 @@ schreibt dann die Warnung in den Plan:
 > Die Angel ist nur 14,0 mm hoch, die Klinge am Heft 26,0 mm: der Stahl ragt
 > je 6,0 mm über die Angel hinaus …
 
-**Noch offen:** Beim Ein-Stück-Griff muss der **Absatz der Klinge** auf die
-Höhe des verdeckten Ansatzes geschliffen werden — das Modell bildet die
-Klinge immer in voller Höhe ab. Wer einen Ein-Stück-Griff baut, muss die
-Klinge also selbst auf 6,5 mm am Heft bringen.
+**Der Absatz der Klinge (seit 0.4.0):** Beim Ein-Stück-Griff steckt nur ein
+kurzer verdeckter Ansatz in der Tasche im Holz. Die Klinge muss am Heft auf
+diese Höhe geschliffen werden — sonst steht sie als 26 mm hoher Stahlkeil vor
+dem Griff und passt nicht in die Tasche. Seit 0.4.0 rechnet das Programm
+diese Schleifung mit: die Klinge ist am Heft so hoch wie der Ansatz (6,5 mm)
+und wächst über *Länge des Absatzes* (12 mm) auf die volle Klingenhöhe.
+Die Arbeitsreihenfolge nennt den Schleifschritt, das 3D-Modell zeigt die
+geschliffene Form, und FreeCAD verschmilzt Klinge und Angel sauber.
+
+*Prüfen:* Bauart *Ein-Stück-Griff* → der Absatz der Klinge ist in der
+3D-Ansicht deutlich schmaler als die Klinge, und im Textplan steht
+„Absatz der Klinge schleifen". Bei zwei Schalen bleibt die Klinge am Heft
+voll hoch — dort ist die Angel durchgehend und es wird nichts geschliffen.

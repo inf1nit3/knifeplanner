@@ -158,7 +158,7 @@ pub fn sammle_daten(plan: &DesignPlan, blank: &BladeBlank, params: &HandleParams
     let x_end = g.outline.iter().map(|q| q.0).fold(f64::MIN, f64::max);
     let x_span = (x_end - x_start).max(1.0);
 
-    let klinge = crate::blade::ringe(blank);
+    let klinge = crate::blade::ringe(blank, crate::geometry::abschleifung(blank, params));
 
     let mut keile = Vec::new();
     for body in &ringe {

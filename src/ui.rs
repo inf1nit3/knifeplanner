@@ -685,6 +685,16 @@ impl App {
                         "Höhe des Stahlstücks in der Tasche. Der Absatz der Klinge wird auf \
                          diese Höhe geschliffen.",
                     );
+                    changed |= drag_row(
+                        ui,
+                        "Länge des Absatzes",
+                        &mut self.params.heel_grind_mm,
+                        0.0..=40.0,
+                    );
+                    ui.small(
+                        "So weit wird die Klinge am Heft zurückgeschliffen, bis sie in \
+                         die Tasche passt.",
+                    );
                 }
 
                 egui::ComboBox::from_id_salt("hand")

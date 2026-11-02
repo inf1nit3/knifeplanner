@@ -30,15 +30,36 @@ const BEVEL_BREITE: f64 = 1.3;
 /// Rechnen degeneriert und das Volumen ungueltig wird.
 const MINDEST_HOEHE: f64 = 0.35;
 
+/// Der am Heft abgeschliffene Absatz der Klinge.
+///
+/// Beim verdeckten Ansatz (Ein-Stueck-Griff) steckt nur ein kurzer
+/// Stahlstummel in der Tasche im Holz. Die Klinge muss deshalb am Heft
+/// auf diese Hoehe geschliffen werden - sonst steht sie als dicker
+/// Stahlkeil vor dem Griff und passt nicht in die Tasche.
+#[derive(Clone, Copy, Debug)]
+pub struct Abschleifung {
+    /// Die Hoehe, auf die geschliffen wird
+    pub hoehe_mm: f64,
+    /// Ueber welche Laenge der Absatz laeuft
+    pub laenge_mm: f64,
+}
+
 /// Die Form der Klinge: x, y vom Ruecken, y an der Schneide.
 ///
 /// `x` laeuft von 0 (am Heft) nach vorn (negativ) bis zur Spitze.
-fn stationen(b: &BladeBlank) -> Vec<(f64, f64, f64)> {
+fn stationen(
+    b: &BladeBlank,
+    abschleifung: Option<Abschleifung>,
+) -> Vec<(f64, f64, f64)> {
     let laenge = b.blade_length_mm.max(20.0);
     let hoehe = b.spine_offset_mm + b.edge_offset_mm.abs();
     let spitze = -b.edge_offset_mm.abs() + 0.26 * hoehe;
     let ricasso = b.ricasso_mm.max(0.0).min(laenge * 0.4);
     let mut raus: Vec<(f64, f64, f64)> = Vec::with_capacity(STATIONEN + 1);
+
+    // Die Mittellinie der Klinge: der Ansatz sitzt mittig auf ihr.
+    let mitte = (b.spine_offset_mm - b.edge_offset_mm.abs()) / 2.0;
+
     for i in 0..=STATIONEN {
         let t = i as f64 / STATIONEN as f64;
         let x = -laenge * t;
@@ -57,9 +78,75 @@ fn stationen(b: &BladeBlank) -> Vec<(f64, f64, f64)> {
             b.spine_offset_mm + (spitze + 0.04 - b.spine_offset_mm) * t.powf(2.6);
         let y_schneide = y_schneide_roh.min(y_ruecken_roh - MINDEST_HOEHE);
         let y_ruecken = y_ruecken_roh.max(y_schneide + MINDEST_HOEHE);
+
+        // Der Absatz: am Heft ist die Klinge auf die Hoehe des Ansatzes
+        // geschliffen und waechst ueber die Schleiflaenge auf die volle
+        // Klingenueberhoehe.
+        let (mut y_ruecken, mut y_schneide) = (y_ruecken, y_schneide);
+        if let Some(a) = abschleifung {
+            if a.laenge_mm > 0.0 {
+                let d = -x;
+                if d <= a.laenge_mm {
+                    let f = smoothstep(d / a.laenge_mm);
+                    let s0 = (a.hoehe_mm / (y_ruecken - y_schneide).max(0.5)).min(1.0);
+                    let s = s0 + (1.0 - s0) * f;
+                    y_ruecken = mitte + (y_ruecken - mitte) * s;
+                    y_schneide = mitte + (y_schneide - mitte) * s;
+                }
+            }
+        }
         raus.push((x, y_ruecken, y_schneide));
     }
+
+    // Zusaetzliche Stationen im Bereich der Schleifung - sonst wird der
+    // Absatz zu grob und die Klinge sieht ausgefranst aus.
+    if let Some(a) = abschleifung {
+        if a.laenge_mm > 1.0 {
+            let mut extra: Vec<(f64, f64, f64)> = Vec::new();
+            for k in 1..6 {
+                let d = a.laenge_mm * k as f64 / 6.0;
+                let x = -d;
+                let t = (-x / laenge).clamp(0.0, 1.0);
+                let span = (laenge - ricasso).max(1.0);
+                let p = ((-x - ricasso) / span).clamp(0.0, 1.0);
+                let y_schneide_roh = if ricasso > 0.0 && -x <= ricasso {
+                    -b.edge_offset_mm.abs()
+                } else {
+                    -b.edge_offset_mm.abs()
+                        + (spitze - 0.04 + b.edge_offset_mm.abs()) * p.powf(2.2)
+                };
+                let y_ruecken_roh =
+                    b.spine_offset_mm + (spitze + 0.04 - b.spine_offset_mm) * t.powf(2.6);
+                let y_schneide = y_schneide_roh.min(y_ruecken_roh - MINDEST_HOEHE);
+                let y_ruecken = y_ruecken_roh.max(y_schneide + MINDEST_HOEHE);
+                let f = smoothstep(d / a.laenge_mm);
+                let s0 = (a.hoehe_mm / (y_ruecken - y_schneide).max(0.5)).min(1.0);
+                let s = s0 + (1.0 - s0) * f;
+                let yr = mitte + (y_ruecken - mitte) * s;
+                let ys = mitte + (y_schneide - mitte) * s;
+                extra.push((x, yr, ys));
+            }
+            // Die Stationen muessen von hinten nach vorn laufen - also
+            // einsortieren, nicht davor stellen.
+            raus.extend(extra);
+            raus.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
+        }
+    }
     raus
+}
+
+/// Die Stationen der Klinge - fuer die Pruefung oeffentlich.
+pub fn stationen_oeffentlich(
+    b: &BladeBlank,
+    abschleifung: Option<Abschleifung>,
+) -> Vec<(f64, f64, f64)> {
+    stationen(b, abschleifung)
+}
+
+/// Die weiche Stufe zwischen 0 und 1.
+fn smoothstep(t: f64) -> f64 {
+    let t = t.clamp(0.0, 1.0);
+    t * t * (3.0 - 2.0 * t)
 }
 
 /// Die Dicke an der Schneide an der Stelle t (0 = Heft, 1 = Spitze).
@@ -100,9 +187,12 @@ fn querschnitt(b: &BladeBlank, y_ruecken: f64, y_schneide: f64, t: f64) -> Vec<(
 ///
 /// Jeder Ring liegt in einer Ebene senkrecht zur x-Achse - so rechnet
 /// FreeCAD daraus einen sauberen Solid.
-pub fn ringe(b: &BladeBlank) -> Vec<Vec<(f64, f64, f64)>> {
+pub fn ringe(
+    b: &BladeBlank,
+    abschleifung: Option<Abschleifung>,
+) -> Vec<Vec<(f64, f64, f64)>> {
     let mut raus: Vec<Vec<(f64, f64, f64)>> = Vec::new();
-    let n = stationen(b);
+    let n = stationen(b, abschleifung);
     for (i, &(x, y_ruecken, y_schneide)) in n.iter().enumerate() {
         let t = i as f64 / (n.len() - 1).max(1) as f64;
         // Ganz hinten laeuft die Klinge spitz zu - der letzte Ring ist
@@ -125,8 +215,8 @@ pub fn ringe(b: &BladeBlank) -> Vec<Vec<(f64, f64, f64)>> {
 ///
 /// Die Ringe liegen senkrecht zur x-Achse, deshalb wird hier eigens
 /// gewickelt - `mesh::loft` rechnet Ringe in der xy-Ebene.
-pub fn klinge(b: &BladeBlank) -> Mesh {
-    let r = ringe(b);
+pub fn klinge(b: &BladeBlank, abschleifung: Option<Abschleifung>) -> Mesh {
+    let r = ringe(b, abschleifung);
     let mut mesh = Mesh::default();
     if r.len() < 2 {
         return mesh;
@@ -169,8 +259,8 @@ pub fn klinge(b: &BladeBlank) -> Mesh {
 ///
 /// Von der Spitze laeuft sie ueber den Ruecken zum Heft und ueber die
 /// Schneide zurueck.
-pub fn profil(b: &BladeBlank) -> Vec<(f64, f64)> {
-    let n = stationen(b);
+pub fn profil(b: &BladeBlank, abschleifung: Option<Abschleifung>) -> Vec<(f64, f64)> {
+    let n = stationen(b, abschleifung);
     let mut raus: Vec<(f64, f64)> = Vec::new();
     // Der Ruecken von der Spitze zum Heft
     for &(x, y_ruecken, _) in n.iter().rev() {
@@ -190,7 +280,7 @@ mod tests {
     #[test]
     fn klinge_ist_ein_sauberer_koerper() {
         let b = BladeBlank::default();
-        let r = ringe(&b);
+        let r = ringe(&b, None);
         assert!(r.len() > 10, "zu wenige Ringe: {}", r.len());
         // Alle Ringe haben gleich viele Punkte
         let n = r[0].len();
@@ -212,7 +302,7 @@ mod tests {
             "Klinge laeuft zur Spitze nicht spitz zu: {letzte_hoehe} statt {erste_hoehe}"
         );
         // Das Netz hat ein positives Volumen
-        let m = klinge(&b);
+        let m = klinge(&b, None);
         let v = crate::mesh::signed_volume(&m);
         assert!(v > 100.0, "Volumen der Klinge: {v}");
     }
@@ -220,7 +310,7 @@ mod tests {
     #[test]
     fn klinge_sitzt_am_heft_auf_der_griffkontur() {
         let b = BladeBlank::default();
-        let r = ringe(&b);
+        let r = ringe(&b, None);
         // Der erste Ring liegt bei x = 0 und reicht von der Schneide bis
         // zum Ruecken des Rohlings.
         let ys: Vec<f64> = r[0].iter().map(|p| p.1).collect();
