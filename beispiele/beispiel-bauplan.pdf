@@ -109,7 +109,7 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 10 0 R >>
 endobj
 10 0 obj
-<< /Length 3064 >>
+<< /Length 3095 >>
 stream
 q
 0.000 0.000 0.000 RG
@@ -131,8 +131,8 @@ BT /F2 9.50 Tf 1 0 0 1 42.52 631.20 Tm (4.) Tj ET
 BT /F1 9.50 Tf 1 0 0 1 70.87 631.20 Tm (Griffschale\(n\) zuschneiden - Kontur aus dem DXF \(Layer SCHALE\), Schalendicke 8,8 mm.) Tj ET
 0.100 0.100 0.100 rg
 BT /F2 9.50 Tf 1 0 0 1 42.52 605.69 Tm (5.) Tj ET
-BT /F1 9.50 Tf 1 0 0 1 70.87 605.69 Tm (Aussparung für die Angel fräsen: Nut 4,5 mm tief \(Angel + 0,03 mm Spalt\), Kontur aus dem DXF \(Layer) Tj ET
-BT /F1 9.50 Tf 1 0 0 1 70.87 588.69 Tm (AUSSPA\).) Tj ET
+BT /F1 9.50 Tf 1 0 0 1 70.87 605.69 Tm (Die Angel sitzt in der Fuge zwischen den Schalen - die Schalen liegen flach an ihr und werden dort verleimt.) Tj ET
+BT /F1 9.50 Tf 1 0 0 1 70.87 588.69 Tm (Eine Tasche wird nicht ausgefräst.) Tj ET
 0.100 0.100 0.100 rg
 BT /F2 9.50 Tf 1 0 0 1 42.52 563.17 Tm (6.) Tj ET
 BT /F1 9.50 Tf 1 0 0 1 70.87 563.17 Tm (Bohrungen setzen nach der Bohrplan-Tabelle, Vorsteckbohrungen mit Ø 2,3 mm, Reibnieten mit Ø 2,4 mm) Tj ET
@@ -177,5 +177,5 @@ xref
 trailer
 << /Size 11 /Root 1 0 R >>
 startxref
-8063
+8094
 %%EOF

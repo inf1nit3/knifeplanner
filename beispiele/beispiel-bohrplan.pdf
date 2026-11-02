@@ -16,7 +16,7 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 6 0 R >>
 endobj
 6 0 obj
-<< /Length 16900 >>
+<< /Length 16931 >>
 stream
 q
 0.000 0.000 0.000 RG
@@ -804,7 +804,7 @@ h S
 0.150 0.150 0.150 rg
 BT /F1 7.00 Tf 1 0 0 1 374.17 520.30 Tm (bei 55 mm | Höhe 31,0 | Wand 2,0 / 3,0 mm) Tj ET
 0.000 0.000 0.000 rg
-BT /F1 8.00 Tf 1 0 0 1 42.52 218.83 Tm (Aussparung: 4,5 mm tief \(Angel + Spalt\) | Kantenabrundung 0,8 mm) Tj ET
+BT /F1 8.00 Tf 1 0 0 1 42.52 218.83 Tm (Angel in der Fuge zwischen den Schalen - die Schalen liegen flach an ihr | Kantenabrundung 0,8 mm) Tj ET
 BT /F1 7.50 Tf 1 0 0 1 42.52 199.49 Tm (! Der Griff reicht 12 mm über die Angel hinaus. Dahinter hält nur noch der Kleber die Schalen zusammen - das ist die Bauart eines Partial Tangs. Ein) Tj ET
 BT /F1 7.50 Tf 1 0 0 1 42.52 188.15 Tm (längerer Rohling wäre robuster, die Angel läuft dann bis zum Griffende.) Tj ET
 Q
@@ -823,5 +823,5 @@ xref
 trailer
 << /Size 7 /Root 1 0 R >>
 startxref
-17415
+17446
 %%EOF
