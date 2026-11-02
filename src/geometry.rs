@@ -978,7 +978,9 @@ pub fn build_geometry(b: &BladeBlank, p: &HandleParams) -> HandleGeometry {
     match p.style {
         HandleStyle::FullTangTwoScale => notes.push(
             "Full Tang: die Angel läuft durch den gesamten Griff. Beide Griffschalen sind \
-             spiegelbildlich, die Bohrungen für die Vorsteckbolzen gehen durch die Angel."
+             spiegelbildlich, die Bohrungen für die Vorsteckbolzen gehen durch die Angel. \
+             Die Angel sitzt in der Fuge zwischen den Schalen - die Schalen liegen flach an \
+             ihr, eine Tasche wird nicht ausgefräst."
                 .into(),
         ),
         HandleStyle::PartialTangBolster => notes.push(

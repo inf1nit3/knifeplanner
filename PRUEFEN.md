@@ -249,11 +249,15 @@ sein (inklusive Material, Querschnitt und Kameraeinstellung).
   Nut der Angel nicht — dafür müsste ihr Loch die Form der Angel haben.
 * Bohrungen erscheinen **nur in der 3D-Ansicht** als rote Zylinder, im STL
   gehören nur die echten Bauteile hinein.
-* Die **Tasche für die Angel** ist in beiden 3D-Modellen (eigenes Netz und
-  FreeCAD) durchgehend, real ist sie so tief wie die Angel dick (4,5 mm) —
-  im Holz bleibt also eine Klebefläche. Für den Zuschnitt und die
-  Gewichtsangabe wird die Tasche richtig gerechnet, im Netz ist sie
-  durchgehend.
+* Die **Tasche für die Angel** gibt es nur beim Ein-Stück- und beim
+  Zwingengriff: Dort wird das Holz für die Angel aufgeschnitten — in den
+  3D-Modellen allerdings durchgehend, real ist die Tasche so tief wie die
+  Angel dick (4,5 mm). Für den Zuschnitt und die Gewichtsangabe wird die
+  Tasche richtig gerechnet, im Netz nicht.
+* Bei **zwei Griffschalen** gibt es **keine** Tasche: die Angel sitzt in der
+  Fuge zwischen den Schalen, die Schalen liegen flach an ihr. Der Plan, der
+  DXF und die Druckschablone weisen das auch so aus — im DXF ist der Layer
+  *AUSSPA* bei dieser Bauart leer.
 
 ### 5.1 Angel und Klinge: die durchgehende Angel (ab 0.3.0)
 

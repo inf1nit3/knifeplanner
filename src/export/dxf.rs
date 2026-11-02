@@ -97,7 +97,12 @@ pub fn build_dxf(
         };
         polyline(&mut out, "SCHALE", &map(&geo.outline), true);
         polyline(&mut out, "ANGEL", &map(&geo.tang_profile), true);
-        polyline(&mut out, "AUSSPA", &map(&geo.recess), true);
+        // Die Aussparung gibt es nur dort, wo das Holz wirklich fuer die
+        // Angel aufgeschnitten wird. Bei zwei Schalen sitzt die Angel in
+        // der Fuge dazwischen - dort waere eine Frassbahn ein Fehler.
+        if params.style.hat_angelnut() {
+            polyline(&mut out, "AUSSPA", &map(&geo.recess), true);
+        }
         if let Some(b) = &geo.bolster_profile {
             polyline(&mut out, "SCHALE", &map(b), true);
         }

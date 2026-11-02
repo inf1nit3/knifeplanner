@@ -325,12 +325,21 @@ impl DesignPlan {
              Schalendicke {}.",
             de_mm(g.scale_thickness_mm, 1)
         ));
-        steps.push(format!(
-            "Aussparung für die Angel fräsen: Nut {} tief (Angel + {} Spalt), \
-             Kontur aus dem DXF (Layer AUSSPA).",
-            de_mm(b.tang_thickness_mm + p.glue_gap_mm, 1),
-            de_mm(p.glue_gap_mm, 2)
-        ));
+        if p.style.hat_angelnut() {
+            steps.push(format!(
+                "Nut fuer die Angel fräsen: {} tief (Angel + {} Spalt), \
+                 Kontur aus dem DXF (Layer AUSSPA).",
+                de_mm(b.tang_thickness_mm + p.glue_gap_mm, 1),
+                de_mm(p.glue_gap_mm, 2)
+            ));
+        } else {
+            steps.push(
+                "Die Angel sitzt in der Fuge zwischen den Schalen - die Schalen \
+                 liegen flach an ihr und werden dort verleimt. Eine Tasche wird \
+                 nicht ausgefräst."
+                .to_string(),
+            );
+        }
         steps.push(format!(
             "Bohrungen setzen nach der Bohrplan-Tabelle, Vorsteckbohrungen mit \
              Ø {}, Reibnieten mit Ø 2,4 mm halbtief.",
@@ -411,12 +420,13 @@ pub fn estimate_weight(
 
     // Holz: zwei Schalen bzw. ein Block
     //
-    // Die Angel sitzt in einer Tasche im Holz - dort fehlt das Holz. Die
-    // Tasche ist so tief wie die Angel dick, der Rest der Schale bleibt.
+    // Bei zwei Schalen liegt die Angel in der Fuge dazwischen - die
+    // Schalen sind massiv. Nur beim Ein-Stueck- und beim Zwingengriff
+    // wird das Holz fuer die Angel aufgeschnitten, dort fehlt es dann.
     let holz_ohne_tasche = outline_area * geo.scale_thickness_mm;
     let holz_in_der_tasche = tang_area * blank.tang_thickness_mm;
     let wood_mm3 = if params.style.has_two_scales() {
-        (holz_ohne_tasche - holz_in_der_tasche) * 2.0
+        holz_ohne_tasche * 2.0
     } else if params.style == crate::model::HandleStyle::PartialTangBolster {
         // Bei der Bastion liegt die Angel im Metall - das Holz ist massiv.
         outline_area * geo.total_thickness_mm
@@ -733,17 +743,31 @@ pub fn build_bohrplan_pdf(plan: &DesignPlan) -> Pdf {
 
     ty += 4.0;
     pdf.set_fill(0.0, 0.0, 0.0);
-    pdf.text(
-        15.0,
-        ty,
-        8.0,
-        &format!(
-            "Aussparung: {} tief (Angel + Spalt) | Kantenabrundung {}",
-            de_mm(b.tang_thickness_mm + p.glue_gap_mm, 1),
-            de_mm(p.edge_break_mm, 1)
-        ),
-        false,
-    );
+    if p.style.hat_angelnut() {
+        pdf.text(
+            15.0,
+            ty,
+            8.0,
+            &format!(
+                "Nut fuer die Angel: {} tief (Angel + Spalt) | Kantenabrundung {}",
+                de_mm(b.tang_thickness_mm + p.glue_gap_mm, 1),
+                de_mm(p.edge_break_mm, 1)
+            ),
+            false,
+        );
+    } else {
+        pdf.text(
+            15.0,
+            ty,
+            8.0,
+            &format!(
+                "Angel in der Fuge zwischen den Schalen - die Schalen liegen flach an ihr | \
+                 Kantenabrundung {}",
+                de_mm(p.edge_break_mm, 1)
+            ),
+            false,
+        );
+    }
     ty += 7.0;
     for w in g.warnings.iter().take(4) {
         ty = pdf.text_block(15.0, ty, 7.5, 180.0, &format!("! {w}"), false, 4.0);
@@ -1040,7 +1064,10 @@ pub fn build_schablone_pdf(plan: &DesignPlan) -> Pdf {
         pdf.set_line_width(0.35);
         pdf.set_dash(&[3.0, 2.0]);
         pdf.polyline(&punkte(&g.tang_profile), true);
-        pdf.polyline(&punkte(&g.recess), true);
+        if p.style.hat_angelnut() {
+            // Nur dort wird fuer die Angel eine Bahn gefraest.
+            pdf.polyline(&punkte(&g.recess), true);
+        }
         if let Some(bo) = &g.bolster_profile {
             pdf.polyline(&punkte(bo), true);
         }

@@ -62,6 +62,17 @@ impl HandleStyle {
     pub fn has_two_scales(&self) -> bool {
         matches!(self, HandleStyle::FullTangTwoScale | HandleStyle::PartialTangBolster)
     }
+
+    /// Wird das Holz fuer die Angel aufgeschnitten?
+    ///
+    /// Nur dort, wo die Angel wirklich im Holz steckt: beim Ein-Stueck-
+    /// Griff (eine Nut in der Vorderkante) und beim Zwingengriff (ein
+    /// Schlitz im Block). Bei zwei Schalen sitzt die Angel in der Fuge
+    /// dazwischen - die Schalen liegen flach an ihr, da wird nichts
+    /// ausgefräst. Bei der Bastion liegt die Angel im Metall.
+    pub fn hat_angelnut(&self) -> bool {
+        matches!(self, HandleStyle::OnePiece | HandleStyle::Ferrule)
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
