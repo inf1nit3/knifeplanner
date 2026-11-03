@@ -16,7 +16,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::model::{BladeBlank, HandleParams};
+use crate::model::{BladeBlank, HandleParams, HandleStyle};
 use crate::plan::DesignPlan;
 
 /// Wo FreeCAD liegen koennte.
@@ -95,6 +95,8 @@ pub struct Ergebnis {
     pub volumen_mm3: f64,
     /// Volumen des Holzteils in mm^3 (die Griffschalen).
     pub holzvolumen_mm3: f64,
+    /// Die einzelnen Teile mit ihrem Volumen in mm^3.
+    pub teile: Vec<(String, f64)>,
 }
 
 /// Die Geometrie fuer das FreeCAD-Makro: die Ringe und die Profile.
@@ -163,21 +165,44 @@ pub fn sammle_daten(plan: &DesignPlan, blank: &BladeBlank, params: &HandleParams
     let mut keile = Vec::new();
     for body in &ringe {
         let (z_min, z_max) = body_z_grenze(body);
-        let anker = if z_min >= -0.001 {
-            z_min
-        } else if z_max <= 0.001 {
-            z_max
-        } else {
-            0.0
+        // Der Keil gilt fuer den ganzen Koerper, nicht fuer eine Gruppe.
+        // Die Verjuengung des Querschnitts wirkt ueber die ganze Dicke -
+        // wird sie je Gruppe gerechnet, schneidet der Keil zu viel weg.
+        let (anker, oben_grenze, unten_grenze) = match params.style {
+            HandleStyle::FullTangTwoScale => {
+                // Jede Schale ist ein eigener Koerper.
+                let a = if z_min >= -0.001 {
+                    z_min
+                } else if z_max <= 0.001 {
+                    z_max
+                } else {
+                    0.0
+                };
+                (a, z_max, z_min)
+            }
+            _ => {
+                // Jede Gruppe bekommt ihren eigenen Keil: der Ausschnitt
+                // gilt nur fuer den Bereich, den die Gruppe einnimmt.
+                // Sonst schneidet der Keil an den Gruppengrenzen zu viel
+                // weg - die beiden Modelle laufen dann auseinander.
+                let a = if z_min >= -0.001 {
+                    z_min
+                } else if z_max <= 0.001 {
+                    z_max
+                } else {
+                    0.0
+                };
+                (a, z_max, z_min)
+            }
         };
         let mut oben = Vec::new();
         let mut unten = Vec::new();
         if params.section.taper_mm > 0.01 {
-            if (z_max - anker).abs() > 0.01 {
-                oben = keilprofil(params, x_start, x_span, span, anker, z_max, true);
+            if (oben_grenze - anker).abs() > 0.01 {
+                oben = keilprofil(params, x_start, x_span, span, anker, oben_grenze, true);
             }
-            if (z_min - anker).abs() > 0.01 {
-                unten = keilprofil(params, x_start, x_span, span, anker, z_min, false);
+            if (unten_grenze - anker).abs() > 0.01 {
+                unten = keilprofil(params, x_start, x_span, span, anker, unten_grenze, false);
             }
         }
         keile.push((oben, unten));
@@ -756,10 +781,24 @@ pub fn baue(
     };
     let volumen_mm3 = hole_zahl("KP_GESAMT ");
     let holzvolumen_mm3 = hole_zahl("KP_HOLZ ");
+    // Die einzelnen Teile mit ihrem Volumen - damit laesst sich nachsehen,
+    // welcher Koerper von einem Modell abweicht.
+    let teile: Vec<(String, f64)> = alles
+        .lines()
+        .filter_map(|l| {
+            let l = l.trim();
+            let rest = l.strip_prefix("KP ")?;
+            let (name, rest) = rest.split_once(": ")?;
+            let (_, rest) = rest.rsplit_once(", Volumen ")?;
+            let wert = rest.trim().trim_end_matches(" mm3").trim();
+            wert.parse::<f64>().ok().map(|v| (name.to_string(), v))
+        })
+        .collect();
     let step_ziel = if step.exists() { step } else { stl.clone() };
     Ok(Ergebnis {
         stl,
         step: step_ziel,
+        teile,
         dauer_ms,
         meldung: alles
             .lines()
@@ -851,3 +890,4 @@ mod pfad_tests {
         assert!(!code.contains("r'C:"), "keine rohen Pfade im Makro");
     }
 }
+

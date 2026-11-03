@@ -169,6 +169,26 @@ pub fn abschleifung(
     })
 }
 
+/// Die Nut im Holz fuer die Angel.
+///
+/// `pfad` ist der Umriss der Nut in der Seitenansicht, `z_von` und
+/// `z_bis` der Bereich in der Dickenrichtung, in dem das Holz fehlt.
+/// Ausserhalb davon bleibt das Holz stehen - das ist die Klebeflaeche
+/// neben der Angel.
+#[derive(Clone, Debug)]
+pub struct Nut {
+    pub pfad: Vec<(f64, f64)>,
+    pub z_von: f64,
+    pub z_bis: f64,
+}
+
+impl Nut {
+    /// Gehoert die Ebene z zu dieser Nut?
+    fn enthaelt(&self, z: f64) -> bool {
+        z >= self.z_von - 1e-6 && z <= self.z_bis + 1e-6
+    }
+}
+
 /// Die Angelform an der Stelle x: (oben, unten) in der Hoehenrichtung.
 ///
 /// None, wenn an dieser Stelle keine Angel mehr liegt.
@@ -1670,7 +1690,7 @@ pub fn body_rings(
     b: &BladeBlank,
     p: &HandleParams,
     outline: &[(f64, f64)],
-    slot_path: Option<&[(f64, f64)]>,
+    nut: Option<&Nut>,
     z_top: f64,
     z_bottom: f64,
     span: f64,
@@ -1678,7 +1698,7 @@ pub fn body_rings(
     radius_bottom: f64,
     keel_enabled: bool,
     steps: usize,
-) -> Vec<Ring> {
+) -> Vec<Vec<Ring>> {
     let spec = p.section;
     let steps = steps.max(2);
     let total = (z_top - z_bottom).max(0.1);
@@ -1710,7 +1730,7 @@ pub fn body_rings(
     // Schalen sitzt die Angel in der Fuge dazwischen.
     let wand_staerke = p.wall_min_mm.max(0.8);
     let (mut k_bauch, mut k_ruecken) = (1.0f64, 1.0f64);
-    let angel_im_holz = slot_path.is_some() || p.style == HandleStyle::PartialTangBolster;
+    let angel_im_holz = nut.is_some() || p.style == HandleStyle::PartialTangBolster;
     if angel_im_holz {
         for &pt in outline.iter() {
             let x = pt.0;
@@ -1772,7 +1792,9 @@ pub fn body_rings(
     // getroffen wird
     let z_a = z_top - radius_top;
     let z_b = z_bottom + radius_bottom;
-    if z_b > z_a + 1e-6 {
+    // Der gerade Teil liegt zwischen den beiden Phasen - unten ist er
+    // kleiner als oben (z laeuft von oben nach unten).
+    if z_b < z_a - 1e-6 {
         for k in 1..=MITTLERE_SCHNITTE {
             let t = k as f64 / (MITTLERE_SCHNITTE + 1) as f64;
             schnitte.push((z_a + (z_b - z_a) * t, 0.0));
@@ -1786,6 +1808,23 @@ pub fn body_rings(
         }
     } else {
         schnitte.push((z_bottom, 0.0));
+    }
+
+    // Die Grenzen der Nut sind eigene Schnitte - dort liegt der Boden
+    // der Tasche. Ohne sie faellt der Boden auf die naechste
+    // Schnittebene und die Nut wird zu tief oder zu flach.
+    if let Some(n) = nut {
+        for z in [n.z_bis, n.z_von] {
+            if z <= z_bottom + 1e-6 || z >= z_top - 1e-6 {
+                continue;
+            }
+            if schnitte.iter().any(|&(zz, _)| (zz - z).abs() < 1e-6) {
+                continue;
+            }
+            schnitte.push((z, 0.0));
+        }
+        // Die Schnitte laufen von oben nach unten
+        schnitte.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
     }
 
     for (z, inset) in schnitte {
@@ -1817,26 +1856,43 @@ pub fn body_rings(
     // Nutspitze, oben heraus) und dann weiter ueber die Aussenkontur.
     // Haengt man die Nut hinten an, schneidet sie die Kontur diagonal
     // durch - der Ring waere dann keine einfache Flaeche mehr.
-    if let Some(sp) = slot_path {
-        for ring in rings.iter_mut() {
-            let z = ring[0].2;
+    //
+    // Die Nut reicht nur so tief wie die Angel dick ist. Darunter bleibt
+    // das Holz stehen: das ist die Klebeflaeche neben der Angel. Deshalb
+    // zerfaellt der Koerper in Gruppen - die mit der Nut und die ohne.
+    let mut gruppen: Vec<Vec<Ring>> = Vec::new();
+    let mut aktuell: Vec<Ring> = Vec::new();
+    let mut mit_nut = false;
+    for mut ring in rings {
+        let z = ring[0].2;
+        let gehoert = nut.map(|n| n.enthaelt(z)).unwrap_or(false);
+        if !aktuell.is_empty() && gehoert != mit_nut {
+            gruppen.push(std::mem::take(&mut aktuell));
+        }
+        mit_nut = gehoert;
+        if gehoert {
+            let n = nut.expect("gehoert nur mit Nut");
             let shaped: Vec<(f64, f64, f64)> = ring
                 .iter()
                 .take(outline.len())
                 .cloned()
                 .collect();
-            if shaped.len() < 2 {
-                continue;
+            if shaped.len() >= 2 {
+                let mut merged: Vec<(f64, f64, f64)> =
+                    Vec::with_capacity(shaped.len() + n.pfad.len());
+                merged.push(shaped[0]);
+                merged.extend(n.pfad.iter().map(|&(x, y)| (x, y, z)));
+                merged.extend(shaped[1..].iter().copied());
+                ring = merged;
             }
-            let mut merged: Vec<(f64, f64, f64)> = Vec::with_capacity(shaped.len() + sp.len());
-            merged.push(shaped[0]);
-            merged.extend(sp.iter().map(|&(x, y)| (x, y, z)));
-            merged.extend(shaped[1..].iter().copied());
-            *ring = merged;
         }
+        aktuell.push(ring);
+    }
+    if !aktuell.is_empty() {
+        gruppen.push(aktuell);
     }
 
-    rings
+    gruppen
 }
 
 /// Baut die Ringe der Griffkoerper je nach Bauart.
@@ -1854,6 +1910,9 @@ fn build_bodies(
     // Die Nut fuer die Angel - dort, wo die Angel im Holz liegt
     let path = slot_path(recess);
 
+    // Die halbe Dicke der Angel: so tief reicht die Nut im Holz.
+    let tang_t = b.tang_thickness_mm;
+
     match p.style {
         HandleStyle::FullTangTwoScale => {
             // Zwei Schalen: die Innenflaechen bleiben flach (Klebeflaeche),
@@ -1862,24 +1921,34 @@ fn build_bodies(
             // montierten Griff bilden beide Schalen zusammen den Grat.
             let upper = body_rings(b, p, outline, None, scale_t, 0.0, scale_t, r, 0.0, true, schritte);
             let lower = body_rings(b, p, outline, None, 0.0, -scale_t, scale_t, 0.0, r, true, schritte);
-            let tang_t = b.tang_thickness_mm;
-            bodies.push(translate_rings(&upper, tang_t / 2.0));
-            bodies.push(translate_rings(&lower, -tang_t / 2.0));
+            for g in upper {
+                bodies.push(translate_rings(&g, tang_t / 2.0));
+            }
+            for g in lower {
+                bodies.push(translate_rings(&g, -tang_t / 2.0));
+            }
         }
         HandleStyle::PartialTangBolster | HandleStyle::Ferrule => {
             // Der Zwingengriff laesst die Angel ein - dafuer braucht das
             // Holz die Nut. Bei der Bastion liegt die Angel im Metall,
             // dort bleibt das Holz massiv.
-            let nut: Option<&[(f64, f64)]> = if p.style == HandleStyle::Ferrule {
-                Some(path.as_slice())
+            // Beim Zwingengriff wird die Angel in eine Nut eingelassen. Bei
+            // der Bastion liegt sie im Metall - dort bleibt das Holz
+            // massiv.
+            let nut: Option<Nut> = if p.style == HandleStyle::Ferrule {
+                Some(Nut {
+                    pfad: path.clone(),
+                    z_von: -tang_t / 2.0,
+                    z_bis: tang_t / 2.0,
+                })
             } else {
                 None
             };
-            let rings = body_rings(
+            for g in body_rings(
                 b,
                 p,
                 outline,
-                nut,
+                nut.as_ref(),
                 total_t / 2.0,
                 -total_t / 2.0,
                 total_t / 2.0,
@@ -1887,16 +1956,24 @@ fn build_bodies(
                 r * 1.5,
                 false,
                 schritte,
-            );
-            bodies.push(rings);
+            ) {
+                bodies.push(g);
+            }
         }
         HandleStyle::OnePiece => {
             // Der Ein-Stueck-Griff hat zusaetzlich die Nut fuer die Angel.
-            let rings = body_rings(
+            // Der Ein-Stueck-Griff: die Angel liegt in einer Nut, die von
+            // der Vorderkante aus gefraest wird.
+            let nut = Nut {
+                pfad: path.clone(),
+                z_von: -tang_t / 2.0,
+                z_bis: tang_t / 2.0,
+            };
+            for g in body_rings(
                 b,
                 p,
                 outline,
-                Some(&path),
+                Some(&nut),
                 total_t / 2.0,
                 -total_t / 2.0,
                 total_t / 2.0,
@@ -1904,8 +1981,9 @@ fn build_bodies(
                 r * 1.5,
                 true,
                 schritte,
-            );
-            bodies.push(rings);
+            ) {
+                bodies.push(g);
+            }
         }
     }
     bodies
@@ -1929,16 +2007,18 @@ mod ring_tests {
         let b = BladeBlank::default();
         let p = HandleParams::default();
         let (outline, _) = build_outline(&b, &p);
-        let rings = body_rings(&b, &p, &outline, None, 7.75, 0.0, 7.75, 0.8, 0.0, false, 5);
+        let gruppen = body_rings(&b, &p, &outline, None, 7.75, 0.0, 7.75, 0.8, 0.0, false, 5);
+        assert_eq!(gruppen.len(), 1, "ohne Nut gibt es nur eine Gruppe");
+        let rings = &gruppen[0];
         assert!(rings.len() >= 3, "zu wenige Ringe: {}", rings.len());
 
         let n = rings[0].len();
-        for r in &rings {
+        for r in rings.iter() {
             assert_eq!(r.len(), n, "die Ringe muessen gleich viele Punkte haben");
         }
         // Die Ringe muessen von oben nach unten laufen
         let mut last_z = f64::MAX;
-        for r in &rings {
+        for r in rings.iter() {
             let z = r.iter().map(|p| p.2).sum::<f64>() / n as f64;
             assert!(z <= last_z + 0.001, "die Ringe muessen fallen: {last_z} -> {z}");
             last_z = z;
@@ -1963,12 +2043,12 @@ mod ring_tests {
                 "Deckflaeche {label} ist keine einfache Kontur");
         }
         // Das Volumen muss positiv sein - sonst ist die Wicklung falsum
-        let mesh = crate::mesh::loft(&rings);
+        let mesh = crate::mesh::loft(rings);
         let vol = crate::mesh::signed_volume(&mesh);
         eprintln!("Volumen: {vol:.1} mm^3");
         assert!(vol > 100.0, "Volumen negativ oder zu klein: {vol} - die Wicklung stimmt nicht");
         // Der Querschnitt darf nicht auf den Kopf stehen
-        for r in &rings {
+        for r in rings.iter() {
             let ys: Vec<f64> = r.iter().map(|p| p.1).collect();
             let top = ys.iter().cloned().fold(f64::MIN, f64::max);
             let bot = ys.iter().cloned().fold(f64::MAX, f64::min);
@@ -2261,6 +2341,7 @@ mod zuschnitt_tests {
         assert!(dicke > 4.0, "Das Holz ist zu duenn: {dicke}");
     }
 }
+
 
 
 

@@ -353,7 +353,9 @@ Skizze, sondern die Konstruktion:
 - **Bastion oder Zwinge** als eigener Metallkörper.
 - **Die Aussparung** für die Angel liegt als Fräsbahn bei.
 - **Beim Ein-Stück-Griff** ist die Nut für die Angel in den Boden gefräst und
-  die Angel liegt sichtbar darin.
+  die Angel liegt sichtbar darin. Die Nut ist **so tief wie die Angel dick**
+  (4,5 mm) — das Holz steht daneben fest und bleibt die Klebefläche. Beim
+  Zwingengriff liegt die Angel in einem entsprechenden Schlitz im Block.
 - **Die Bohrungen** erscheinen als rote Zylinder – man sieht direkt, wie die
   Bohrer durch die Schale gehen. Im STL sind sie bewusst nicht enthalten
   (dort gehören nur die echten Bauteile hinein).

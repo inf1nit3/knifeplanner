@@ -313,8 +313,8 @@ pub fn offset(poly: &[Point], delta: f64) -> Vec<Point> {
             if len > 1e-9 {
                 let (ux, uy) = (dx / len, dy / len);
                 let vor = vx * ux + vy * uy;
-                if vor < -len * 0.999 {
-                    let f = (-len * 0.999) / vor;
+                if vor < -len * 0.98 {
+                    let f = (-len * 0.98) / vor;
                     vx *= f;
                     vy *= f;
                 }
@@ -328,8 +328,8 @@ pub fn offset(poly: &[Point], delta: f64) -> Vec<Point> {
             if len > 1e-9 {
                 let (ux, uy) = (dx / len, dy / len);
                 let vor = vx * ux + vy * uy;
-                if vor > len * 0.999 {
-                    let f = (len * 0.999) / vor;
+                if vor > len * 0.98 {
+                    let f = (len * 0.98) / vor;
                     vx *= f;
                     vy *= f;
                 }

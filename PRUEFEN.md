@@ -290,17 +290,17 @@ suchen*.
 * Bohrungen erscheinen **nur in der 3D-Ansicht** als rote Zylinder, im STL
   gehören nur die echten Bauteile hinein.
 * Die **Tasche für die Angel** gibt es nur beim Ein-Stück- und beim
-  Zwingengriff: Dort wird das Holz für die Angel aufgeschnitten — in den
-  3D-Modellen allerdings durchgehend, real ist die Tasche so tief wie die
-  Angel dick (4,5 mm). Für den Zuschnitt und die Gewichtsangabe wird die
-  Tasche richtig gerechnet, im Netz nicht.
-  *Warum das nicht einfach ist:* Der Griffkoerper ist ein Loft über
-  Ringe, und ein Ring hat an jeder Stelle gleich viele Punkte. Eine
-  flache Nut braucht aber Ringe mit und ohne Nut — der Koerper muesste
-  also in Gruppen zerfallen. Dabei stellt sich die Komfortrundung in die
-  Wage: ihr Keil wird im FreeCAD-Modell als Schnitt gesetzt und muss zum
-  ganzen Koerper passen, sonst faellt zu viel Material weg. Beides
-  zusammen zu loesen ist der naechste Schritt, nicht eine Fleissarbeit.
+  Zwingengriff: Dort wird das Holz für die Angel aufgeschnitten — seit
+  0.6.0 aber **so tief wie die Angel dick ist** (4,5 mm). Das Holz steht
+  daneben fest, es bleibt also eine Klebefläche. Im Modell liegt die Tasche
+  in der Mitte der Dicke (z = −2,25 … +2,25 mm), das Holz aussen und
+  innen ist massiv.
+  *Warum das nicht einfach war:* Der Griffkörper ist ein Loft über Ringe,
+  und ein Ring hat an jeder Stelle gleich viele Punkte. Eine flache Nut
+  braucht aber Ringe mit und ohne Nut — der Körper musste also in Gruppen
+  zerfallen (mit Nut, aussen, innen). Dazu kam die Komfortrundung: ihr
+  Keil wird im FreeCAD-Modell als Schnitt gesetzt und muss zum ganzen
+  Körper passen, sonst schneidet er zu viel weg. Beides ist jetzt gelöst.
 * Bei **zwei Griffschalen** gibt es **keine** Tasche: die Angel sitzt in der
   Fuge zwischen den Schalen, die Schalen liegen flach an ihr. Der Plan, der
   DXF und die Druckschablone weisen das auch so aus — im DXF ist der Layer
