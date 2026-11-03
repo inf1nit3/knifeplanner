@@ -1404,6 +1404,21 @@ impl eframe::App for App {
                 crate::update::Zustand::Fertig { datei, .. } => Some(datei.clone()),
                 _ => None,
             };
+            match &z {
+                crate::update::Zustand::Neu(u) => {
+                    self.note(&format!("Neue Version gefunden: {}", u.version))
+                }
+                crate::update::Zustand::Aktuell => {
+                    self.note(&format!(
+                        "Alles aktuell (Version {})",
+                        crate::update::eigene_version()
+                    ))
+                }
+                crate::update::Zustand::Fehler(e) => {
+                    self.note(&format!("Update-Suche fehlgeschlagen: {e}"))
+                }
+                _ => {}
+            }
             self.update_zustand = z;
             if let Some(datei) = fertig {
                 self.update_einsetzen_und_neustart(&datei);
@@ -1417,6 +1432,7 @@ impl eframe::App for App {
             && self.startzeit.elapsed() > std::time::Duration::from_secs(2)
         {
             self.update_auto_geprueft = true;
+            self.note("Suche nach einer neuen Version ...");
             self.update_pruefen();
         }
 
