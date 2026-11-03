@@ -221,6 +221,46 @@ sein (inklusive Material, Querschnitt und Kameraeinstellung).
 
 ---
 
+## 3a. Der Updater
+
+Das Programm sucht **zwei Sekunden nach dem Start** von selbst auf GitHub
+nach einer neuen Version. Im Protokoll steht das so:
+
+```
+[1793743517] Suche nach einer neuen Version ...
+[1793743518] Alles aktuell (Version 0.5.0)
+```
+
+Ist eine neuere Version da, steht der Hinweis oben im Fenster:
+
+```
+[1793743560] Neue Version gefunden: 0.5.0
+```
+
+Der Ablauf ist halbautomatisch: **Suchen** passiert von selbst, das
+**Laden** ist ein Klick auf *Herunterladen und einsetzen*, und danach setzt
+das Programm die neue Datei selbst ein und **startet neu**. Vorher wird der
+Plan als `letzter_plan.json` neben dem Programm gesichert.
+
+**Selbst prüfen** (ohne die Oberfläche zu brauchen):
+
+```
+cargo test --release -- --ignored --nocapture
+```
+
+Das testet gegen das echte Release auf GitHub: es muss eine neuere Version
+finden und die Datei byteweise herunterladen. Erwartet wird:
+
+```
+gefunden: Version 0.5.0 (11.0 MB)
+geladen: 11509248 Bytes (erwartet 11509248)
+```
+
+**Abschalten:** *Einstellungen / API* → *Update* → *Beim Start selbst
+suchen*.
+
+---
+
 ## 4. Was du mir schickst
 
 1. **Die Protokolldatei** `%APPDATA%\knifeplanner\knifeplanner.log`
