@@ -270,6 +270,21 @@ pub fn raeume_auf() {
     });
 }
 
+/// Soll jetzt nach einer neuen Version gesucht werden?
+///
+/// Beim Start sucht das Programm von selbst - aber erst, wenn die
+/// Oberflaeche steht, und nur einmal.
+pub fn soll_geprueft_werden(
+    start: std::time::Instant,
+    schon_geprueft: bool,
+    aktiv: bool,
+) -> bool {
+    if schon_geprueft || !aktiv {
+        return false;
+    }
+    start.elapsed() >= std::time::Duration::from_secs(2)
+}
+
 /// Startet das Programm neu.
 ///
 /// Wird nach dem Einsetzen einer neuen Version benutzt: der neue
@@ -360,6 +375,19 @@ mod tests {
         let alt = alt_datei(&ziel);
         assert_ne!(ziel, alt);
         assert!(alt.to_string_lossy().ends_with(".exe.alt"), "{alt:?}");
+    }
+
+    #[test]
+    fn die_suche_beim_start_ist_einmal_und_nach_einem_moment() {
+        let start = std::time::Instant::now();
+        // Vor dem Ablauf der Wartezeit wird nicht gesucht
+        assert!(!soll_geprueft_werden(start, false, true));
+        // Und nachher nur noch einmal
+        let alt = std::time::Instant::now() - std::time::Duration::from_secs(3);
+        assert!(soll_geprueft_werden(alt, false, true));
+        assert!(!soll_geprueft_werden(alt, true, true));
+        // Ausgeschaltet wird nicht gesucht
+        assert!(!soll_geprueft_werden(alt, false, false));
     }
 
     #[test]

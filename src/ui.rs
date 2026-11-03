@@ -1427,10 +1427,21 @@ impl eframe::App for App {
 
         // Beim Start einmal nach einer neuen Version suchen - das passiert
         // erst, wenn die Oberflaeche steht, damit der Start schnell bleibt.
-        if !self.update_auto_geprueft
-            && self.settings.update_pruefen
-            && self.startzeit.elapsed() > std::time::Duration::from_secs(2)
-        {
+        //
+        // Die App zeichnet nur, wenn sich etwas aendert - darum wird fuer
+        // den Startzeitpunkt extra ein Bild angefordert. Sonst liefe die
+        // Suche nie an.
+        if !self.update_auto_geprueft && self.settings.update_pruefen {
+            let uebrig = std::time::Duration::from_secs(2)
+                .checked_sub(self.startzeit.elapsed())
+                .unwrap_or_default();
+            ctx.request_repaint_after(uebrig);
+        }
+        if crate::update::soll_geprueft_werden(
+            self.startzeit,
+            self.update_auto_geprueft,
+            self.settings.update_pruefen,
+        ) {
             self.update_auto_geprueft = true;
             self.note("Suche nach einer neuen Version ...");
             self.update_pruefen();
