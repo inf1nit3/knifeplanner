@@ -253,7 +253,7 @@ finden und die Datei byteweise herunterladen. Erwartet wird:
 
 ```
 gefunden: Version 0.5.0 (11.0 MB)
-geladen: 11509248 Bytes (erwartet 11509248)
+geladen: 11511808 Bytes (erwartet 11511808)
 ```
 
 **Abschalten:** *Einstellungen / API* → *Update* → *Beim Start selbst
