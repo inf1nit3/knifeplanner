@@ -361,4 +361,28 @@ mod tests {
         assert_ne!(ziel, alt);
         assert!(alt.to_string_lossy().ends_with(".exe.alt"), "{alt:?}");
     }
+
+    #[test]
+    fn die_neue_datei_ersetzt_die_alte() {
+        // So funktioniert der Austausch unter Windows: die laufende Datei
+        // laesst sich nicht ueberschreiben, also wird sie kurz
+        // umbenannt und die neue an ihren Platz gelegt. Die umbenannte
+        // Datei raeumt der naechste Start weg.
+        let ordner = std::env::temp_dir().join(format!("kp_update_{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&ordner);
+        std::fs::create_dir_all(&ordner).expect("Temp-Ordner");
+        let ziel = ordner.join("knifeplanner.exe");
+        let neu = ordner.join("knifeplanner.neu");
+        std::fs::write(&ziel, b"alt").expect("alt schreiben");
+        std::fs::write(&neu, b"neu").expect("neu schreiben");
+
+        setze_ein(&neu, &ziel).expect("einsetzen");
+        assert_eq!(std::fs::read(&ziel).expect("lesen"), b"neu");
+        let alt = alt_datei(&ziel);
+        assert!(alt.exists(), "die umbenannte Datei fehlt");
+        assert_eq!(std::fs::read(&alt).expect("lesen"), b"alt");
+
+        std::fs::remove_file(&alt).expect("aufräumen");
+        let _ = std::fs::remove_dir_all(&ordner);
+    }
 }
