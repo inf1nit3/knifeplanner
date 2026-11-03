@@ -216,11 +216,22 @@ gelegt:
 
 ### Updates aus der App
 
-Unter *Einstellungen / API* → *Update* → *Nach Updates suchen* prüft das
-Programm auf GitHub, ob eine neuere Version vorliegt. Wenn ja, lädt es die
-neue Programmdatei herunter und setzt sie an die Stelle der alten — unter
-Windows geht das, weil die laufende Datei kurz umbenannt wird. Danach
-startet man das Programm einmal neu.
+Das Programm sucht **beim Start von selbst** auf GitHub nach, ob eine neuere
+Version vorliegt — zwei Sekunden nach dem Öffnen, damit der Start schnell
+bleibt. Ist eine neuere Version da, steht das als grüner Hinweis oben im
+Fenster, mit dem Knopf *Herunterladen und einsetzen*.
+
+Der Ablauf ist bewusst halbautomatisch: **Suchen** passiert von selbst, das
+**Laden** ist ein Klick (so startet kein großer Download ungefragt), und
+danach **setzt das Programm die neue Datei selbst ein und startet neu**.
+Vor dem Neustart wird der Plan als `letzter_plan.json` neben dem Programm
+gesichert, damit die Arbeit nicht verloren geht. Unter Windows geht das
+Einsetzen, weil die laufende Datei kurz umbenannt wird — die alte Datei
+räumt der neue Start auf.
+
+Abschalten lässt sich die Suche unter *Einstellungen / API* → *Update* →
+*Beim Start selbst suchen*. Manuell suchen geht jederzeit über *Nach Updates
+suchen*.
 
 Der Updater braucht nur eine Internetverbindung zu
 `api.github.com`; das Programm selbst läuft ohne Netz völlig weiter.

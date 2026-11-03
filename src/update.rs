@@ -250,14 +250,37 @@ fn alt_datei(ziel: &Path) -> PathBuf {
 /// Raeumt die ersetzte Datei vom letzten Start weg.
 ///
 /// Wird beim Programmstart gerufen - unter Windows ist die alte Datei
-/// dann nicht mehr gesperrt.
+/// dann noch gesperrt, solange der vorige Aufruf läuft. Das Entfernen
+/// passiert deshalb im Hintergrund und mehrfach versucht, damit der
+/// Start nicht wartet.
 pub fn raeume_auf() {
-    if let Ok(pfad) = std::env::current_exe() {
-        let alt = alt_datei(&pfad);
-        if alt.exists() {
-            let _ = std::fs::remove_file(alt);
+    std::thread::spawn(|| {
+        if let Ok(pfad) = std::env::current_exe() {
+            let alt = alt_datei(&pfad);
+            for _ in 0..12 {
+                if !alt.exists() {
+                    return;
+                }
+                if std::fs::remove_file(&alt).is_ok() {
+                    return;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(250));
+            }
         }
-    }
+    });
+}
+
+/// Startet das Programm neu.
+///
+/// Wird nach dem Einsetzen einer neuen Version benutzt: der neue
+/// Aufruf holt sich die gerade frisch eingesetzte Datei und raeumt die
+/// umbenannte alte auf.
+pub fn starte_neu() -> Result<(), String> {
+    let exe = std::env::current_exe().map_err(|e| format!("Programmpfad: {e}"))?;
+    std::process::Command::new(&exe)
+        .spawn()
+        .map_err(|e| format!("Neustart fehlgeschlagen: {e}"))?;
+    Ok(())
 }
 
 /// Der Ort, an dem die neue Datei zwischengelagert wird.

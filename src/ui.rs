@@ -115,6 +115,11 @@ pub struct App {
     update_zustand: crate::update::Zustand,
     /// Der Kanal, ueber den das Update-Ergebnis zurueckkommt
     update_kanal: Option<std::sync::mpsc::Receiver<crate::update::Zustand>>,
+    /// Wann das Programm gestartet ist - danach wird einmal nach Updates
+    /// gesucht
+    startzeit: std::time::Instant,
+    /// Ob beim Start schon nach Updates gesucht wurde
+    update_auto_geprueft: bool,
 }
 
 impl App {
@@ -175,6 +180,8 @@ impl App {
             datenblaetter: Vec::new(),
             update_zustand: crate::update::Zustand::Leer,
             update_kanal: None,
+            startzeit: std::time::Instant::now(),
+            update_auto_geprueft: false,
         };
         app.rebuild_scene();
         // Die beim letzten Update ersetzte Datei wegraeumen
@@ -1001,6 +1008,12 @@ impl App {
             if ui.button("Nach Updates suchen").clicked() {
                 self.update_pruefen();
             }
+            if ui
+                .checkbox(&mut self.settings.update_pruefen, "Beim Start selbst suchen")
+                .changed()
+            {
+                let _ = crate::settings::speichern(&self.settings);
+            }
             ui.small(format!(
                 "Installiert: Version {}",
                 crate::update::eigene_version()
@@ -1048,8 +1061,8 @@ impl App {
                     egui::RichText::new(format!("Version {version} ist heruntergeladen"))
                         .color(egui::Color32::from_rgb(40, 140, 60)),
                 );
-                if ui.button("Jetzt einsetzen und beenden").clicked() {
-                    self.update_einsetzen(&datei);
+                if ui.button("Jetzt einsetzen und neu starten").clicked() {
+                    self.update_einsetzen_und_neustart(&datei);
                 }
                 ui.small(format!("Die Datei liegt in {}", datei.display()));
             }
@@ -1113,7 +1126,11 @@ impl App {
     }
 
     /// Setzt die neue Programmdatei an die Stelle der alten.
-    fn update_einsetzen(&mut self, datei: &std::path::Path) {
+    /// Setzt die neue Datei ein und startet das Programm neu.
+    ///
+    /// Vorher wird der Plan als Sicherung abgelegt - ein Neustart darf
+    /// keine Arbeit kosten.
+    fn update_einsetzen_und_neustart(&mut self, datei: &std::path::Path) {
         let ziel = match std::env::current_exe() {
             Ok(p) => p,
             Err(e) => {
@@ -1122,13 +1139,38 @@ impl App {
                 return;
             }
         };
+        // Die Sicherung des Plans
+        let project = Project {
+            version: 1,
+            name: self.project_name.clone(),
+            blank: self.blank.clone(),
+            params: self.params.clone(),
+            material_key: self.material_key.clone(),
+            view: crate::project::ViewState {
+                yaw: self.cam.yaw,
+                roll: self.cam.roll,
+                dist: self.cam.dist,
+            },
+            note: self.project_note.clone(),
+            datenblaetter: self.datenblaetter.clone(),
+        };
+        let sicherung = crate::logfile::app_dir().join("letzter_plan.json");
+        match project.save(&sicherung) {
+            Ok(()) => self.note("Plan vor dem Update gesichert (letzter_plan.json)"),
+            Err(e) => self.note(&format!("Plan konnte nicht gesichert werden: {e}")),
+        }
+
         match crate::update::setze_ein(datei, &ziel) {
             Ok(()) => {
-                self.status = "Die neue Version ist eingesetzt. Bitte das Programm neu starten."
+                self.status = "Die neue Version ist eingesetzt - das Programm startet neu."
                     .into();
-                self.note("Update eingesetzt - bitte neu starten");
+                self.note("Update eingesetzt - das Programm startet neu");
                 self.update_zustand = crate::update::Zustand::Leer;
-                // Der alte Aufruf beendet sich nach dem Einsetzen
+                // Der neue Aufruf startet, dann beendet sich dieser hier
+                if let Err(e) = crate::update::starte_neu() {
+                    self.update_zustand = crate::update::Zustand::Fehler(e);
+                    return;
+                }
                 std::thread::sleep(std::time::Duration::from_millis(400));
                 std::process::exit(0);
             }
@@ -1356,7 +1398,26 @@ impl eframe::App for App {
         };
         if let Some(z) = update_fertig {
             self.update_kanal = None;
+            // Ist die Datei fertig geladen, wird sie sofort eingesetzt und
+            // das Programm startet neu - so ist der Update ein Zug.
+            let fertig = match &z {
+                crate::update::Zustand::Fertig { datei, .. } => Some(datei.clone()),
+                _ => None,
+            };
             self.update_zustand = z;
+            if let Some(datei) = fertig {
+                self.update_einsetzen_und_neustart(&datei);
+            }
+        }
+
+        // Beim Start einmal nach einer neuen Version suchen - das passiert
+        // erst, wenn die Oberflaeche steht, damit der Start schnell bleibt.
+        if !self.update_auto_geprueft
+            && self.settings.update_pruefen
+            && self.startzeit.elapsed() > std::time::Duration::from_secs(2)
+        {
+            self.update_auto_geprueft = true;
+            self.update_pruefen();
         }
 
         // Das Ergebnis eines laufenden FreeCAD-Durchlaufs einsammeln.
@@ -1425,6 +1486,33 @@ impl eframe::App for App {
             });
 
         egui::CentralPanel::default_margins().show(ui, |ui| {
+            // Ein Hinweis auf eine neue Version. Der Update-Bereich liegt
+            // in den Einstellungen und ist meist eingeklappt - deshalb
+            // steht der Hinweis hier oben im Bild.
+            if let crate::update::Zustand::Neu(u) = self.update_zustand.clone() {
+                egui::Frame::group(ui.style())
+                    .fill(egui::Color32::from_rgb(232, 244, 232))
+                    .inner_margin(10.0)
+                    .show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            ui.label(
+                                egui::RichText::new(format!(
+                                    "Version {} ist da - laedt gerade der Plan",
+                                    u.version
+                                ))
+                                .strong()
+                                .color(egui::Color32::from_rgb(30, 110, 45)),
+                            );
+                            if ui.button("Herunterladen und einsetzen").clicked() {
+                                self.update_laden(&u);
+                            }
+                        });
+                        if !u.notiz.is_empty() {
+                            ui.small(u.notiz.clone());
+                        }
+                    });
+                ui.add_space(6.0);
+            }
             ui.horizontal(|ui| {
                 for (i, name) in [
                     "3D",

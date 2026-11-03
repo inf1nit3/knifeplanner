@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::logfile;
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Einstellungen {
     /// Pfad zu FreeCADCmd (exe) oder dem bin-Ordner. Leer = automatisch suchen.
     pub freecad_pfad: String,
@@ -17,6 +17,27 @@ pub struct Einstellungen {
     /// Aeltere Dateien haben kein Feld und bleiben damit automatisch.
     #[serde(default)]
     pub freecad_bevorzugen: Option<bool>,
+    /// Beim Start selbststaendig nach einer neuen Version suchen.
+    ///
+    /// Der Download bleibt eine bewusste Entscheidung - nur die Suche
+    /// passiert von selbst.
+    #[serde(default = "standard_update_pruefen")]
+    pub update_pruefen: bool,
+}
+
+/// Standard: beim Start nach Updates suchen.
+pub fn standard_update_pruefen() -> bool {
+    true
+}
+
+impl Default for Einstellungen {
+    fn default() -> Self {
+        Self {
+            freecad_pfad: String::new(),
+            freecad_bevorzugen: None,
+            update_pruefen: standard_update_pruefen(),
+        }
+    }
 }
 
 /// Pfad der Einstellungsdatei.
@@ -65,4 +86,18 @@ pub fn ordner_oeffnen(pfad: &std::path::Path) -> Result<(), String> {
     cmd.spawn()
         .map(|_| ())
         .map_err(|e| format!("Ordner konnte nicht geoeffnet werden: {e}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn updates_werden_beim_start_gesucht() {
+        // Das Programm sucht von sich aus nach einer neuen Version - der
+        // Download bleibt trotzdem eine bewusste Entscheidung.
+        let e = Einstellungen::default();
+        assert!(e.update_pruefen, "die Suche beim Start ist aus");
+        assert!(standard_update_pruefen());
+    }
 }
