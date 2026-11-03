@@ -1929,12 +1929,13 @@ fn build_bodies(
             }
         }
         HandleStyle::PartialTangBolster | HandleStyle::Ferrule => {
-            // Der Zwingengriff laesst die Angel ein - dafuer braucht das
-            // Holz die Nut. Bei der Bastion liegt die Angel im Metall,
-            // dort bleibt das Holz massiv.
-            // Beim Zwingengriff wird die Angel in eine Nut eingelassen. Bei
-            // der Bastion liegt sie im Metall - dort bleibt das Holz
-            // massiv.
+            // Beim Zwingengriff wird die Angel in eine Nut eingelassen.
+            //
+            // Bei der Bastion liegt die Angel vorn im Metall, laeuft aber
+            // weiter durch das Holz. Das Holz muss sie deshalb aussparen -
+            // sonst stecken Holz und Stahl ineinander und der Griff ist
+            // an dieser Stelle nicht baubar. Die Nut beginnt dort, wo das
+            // Holz beginnt.
             let nut: Option<Nut> = if p.style == HandleStyle::Ferrule {
                 Some(Nut {
                     pfad: path.clone(),
@@ -1942,7 +1943,13 @@ fn build_bodies(
                     z_bis: tang_t / 2.0,
                 })
             } else {
-                None
+                let holz_start = outline.first().map(|q| q.0).unwrap_or(0.0);
+                let pfad = clip_x_min(&recess, holz_start);
+                Some(Nut {
+                    pfad: pfad.into_iter().rev().collect(),
+                    z_von: -tang_t / 2.0,
+                    z_bis: tang_t / 2.0,
+                })
             };
             for g in body_rings(
                 b,
@@ -2341,6 +2348,7 @@ mod zuschnitt_tests {
         assert!(dicke > 4.0, "Das Holz ist zu duenn: {dicke}");
     }
 }
+
 
 
 

@@ -280,11 +280,11 @@ suchen*.
 * Der STL enthält die **Baugruppe** (Schalen, Angel, Bastion, Aussparung als
   getrennte Körper). Für den 3D-Druck musst du die Volumen im CAD vereinigen
   oder einzeln drucken.
-* Bei der **Bastion** (teildeckende Angel) liegt die Angel im massiven Holz —
-  das Modell kann keinen geschlossenen Kanal für die Angel darstellen. Im
-  FreeCAD-Modell überlappen sich Holz und Angel dort. Beim Ein-Stück- und
-  beim Zwingengriff ist die Angel in einer echten Nut, dort stören sich die
-  Volumen nicht.
+* Bei der **Bastion** (teildeckende Angel) liegt die Angel vorn im Metall
+  und läuft weiter durch das Holz. Seit 0.7.0 sparsen das Holz sie dort
+  aus — vorher steckten Holz und Stahl ineinander, der Griff war an dieser
+  Stelle nicht baubar. Die Nut beginnt dort, wo das Holz beginnt (hinter
+  der Bastion).
 * Die **Zwinge** ist ein Mantel um das vordere Griffende. Sie überbrückt die
   Nut der Angel nicht — dafür müsste ihr Loch die Form der Angel haben.
 * Bohrungen erscheinen **nur in der 3D-Ansicht** als rote Zylinder, im STL

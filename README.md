@@ -350,7 +350,8 @@ Skizze, sondern die Konstruktion:
 - **Beide Griffschalen** mit sauber gerundeten Kanten (Radius = Kantenabrundung,
   für die Darstellung großzügiger als der Fertigungswert).
 - **Die Angel** sitzt bündig zwischen den Schalen, der Spalt ist sichtbar.
-- **Bastion oder Zwinge** als eigener Metallkörper.
+- **Bastion oder Zwinge** als eigener Metallkörper. Das Holz lässt die
+  Angel dort aus — sie steckt in einer Nut, nicht im Holz.
 - **Die Aussparung** für die Angel liegt als Fräsbahn bei.
 - **Beim Ein-Stück-Griff** ist die Nut für die Angel in den Boden gefräst und
   die Angel liegt sichtbar darin. Die Nut ist **so tief wie die Angel dick**
