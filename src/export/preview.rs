@@ -159,11 +159,15 @@ pub fn render_preview(
             c.line(a, b, tang, 1.0);
         }
     }
-    for i in 0..geo.recess.len() {
-        let a = geo.recess[i];
-        let b = geo.recess[(i + 1) % geo.recess.len()];
-        if (i % 6) < 3 {
-            c.line(a, b, recess, 0.8);
+    // Die Frassbahn gibt es nur dort, wo wirklich Holz wegfällt - bei zwei
+    // Schalen sitzt die Angel in der Fuge dazwischen.
+    if let Some(nut) = &geo.tang_nut {
+        for i in 0..nut.len() {
+            let a = nut[i];
+            let b = nut[(i + 1) % nut.len()];
+            if (i % 6) < 3 {
+                c.line(a, b, recess, 0.8);
+            }
         }
     }
 

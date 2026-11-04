@@ -179,8 +179,23 @@ im Plantext, im DXF-Beschriftungstext, in der Druckschablone und im
 Export-Tab.
 
 Bei zwei Griffschalen ist die Angel aus **Stahl** — das Holz sind nur die
-beiden Schalen, die Dicke entspricht also zwei Schalendicken, nicht der
-Gesamtdicke des Griffes.
+beiden Schalen. Der Rohling besteht dann aus **zwei** Leisten in der Dicke
+einer Schale; dazwischen kommt die Angel aus Stahl, die ihren Platz braucht.
+
+Bei allen anderen Bauarten — Bastion, Ein-Stück-Griff und Zwinge — ist das
+Holz **ein massiver Block** in voller Griffdicke. Die Angel liegt dann in
+einer Nut darin, die in der Mitte der Dicke sitzt.
+
+| Bauart | Rohling | Zuschnitt |
+|---|---|---|
+| Full Tang, zwei Schalen | 2 Leisten | je Schale so dick wie eine Schale, mit Hobelzugabe |
+| Bastion | 1 Block | volle Griffdicke, mit Hobelzugabe |
+| Ein-Stück-Griff | 1 Block | volle Griffdicke, mit Hobelzugabe |
+| Zwinge | 1 Block | volle Griffdicke, mit Hobelzugabe |
+
+Genau diese Zahl steht im Bauplan, im Plantext, im DXF-Beschriftungstext, in
+der Druckschablone und im Export-Tab — und der DXF zeichnet bei zwei Schalen
+zwei Konturen, sonst eine.
 
 Die Angel ist so hoch wie die **Klinge am Heft**: der Stahl läuft ohne Absatz
 aus der Klinge in den Griff und verjüngt sich nach hinten auf eine Spitze.
@@ -206,7 +221,8 @@ Der Export schreibt zusätzlich eine **Druckschablone im Maßstab 1:1**
 (`schablone_1zu1_*.pdf`). Sie ist millimetergenau und wird auf den Rohling
 gelegt:
 
-- beide Griffschalen spiegelbildlich, mit 12 mm Abstand zum Beschnitt
+- bei zwei Griffschalen beide spiegelbildlich, mit 12 mm Abstand zum
+  Beschnitt; bei allen anderen Bauarten ein einzelner Block
 - die Angel und ihre Fräsbahn grün gestrichelt
 - alle Bohrungen als Kreis mit Fadenkreuz und Nummer
 - die Vorderkante des Rohlings rot markiert — dort wird die Schablone

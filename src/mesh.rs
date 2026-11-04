@@ -271,6 +271,24 @@ pub fn prism_yz(profil: &[Point], x0: f64, x1: f64) -> Mesh {
     Mesh { vertices, faces }
 }
 
+/// Das Volumen eines geschlossenen Netzes (Divergenzsatz).
+///
+/// Das Netz muss geschlossen sein - offene Fluechen wuerden das Ergebnis
+/// verfaelschen.
+pub fn volume(m: &Mesh) -> f64 {
+    let mut v = 0.0;
+    for &(a, b, c) in &m.faces {
+        let p = m.vertices[a];
+        let q = m.vertices[b];
+        let r = m.vertices[c];
+        v += (p.0 * (q.1 * r.2 - q.2 * r.1)
+            - p.1 * (q.0 * r.2 - q.2 * r.0)
+            + p.2 * (q.0 * r.1 - q.1 * r.0))
+            / 6.0;
+    }
+    v.abs()
+}
+
 /// Fasst mehrere Volumen zu einem Mesh zusammen.
 pub fn merge(meshes: &[Mesh]) -> Mesh {
     let mut vertices = Vec::new();

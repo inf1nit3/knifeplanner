@@ -21,7 +21,7 @@ API-Schlüssel hinterlegt ist — einen echten Bildanalyse-Aufruf.
 Erwartet wird:
 
 ```
-14 Pruefpunkte bestanden, 0 fehlgeschlagen
+15 Pruefpunkte bestanden, 0 fehlgeschlagen
 ```
 
 Der Bericht liegt danach in `pruefbericht\selbsttest.txt`, die erzeugten
@@ -279,7 +279,8 @@ suchen*.
   Rendering, aber konstruktiv korrekt (alle Maße stimmen).
 * Der STL enthält die **Baugruppe** (Schalen, Angel, Bastion, Aussparung als
   getrennte Körper). Für den 3D-Druck musst du die Volumen im CAD vereinigen
-  oder einzeln drucken.
+  oder einzeln drucken. Die Aussparung gibt es nur dort, wo das Holz wirklich
+  für die Angel aufgeschnitten wird — bei zwei Griffschalen gibt es keine.
 * Bei der **Bastion** (teildeckende Angel) liegt die Angel vorn im Metall
   und läuft weiter durch das Holz. Seit 0.7.0 sparsen das Holz sie dort
   aus — vorher steckten Holz und Stahl ineinander, der Griff war an dieser
@@ -289,18 +290,19 @@ suchen*.
   Nut der Angel nicht — dafür müsste ihr Loch die Form der Angel haben.
 * Bohrungen erscheinen **nur in der 3D-Ansicht** als rote Zylinder, im STL
   gehören nur die echten Bauteile hinein.
-* Die **Tasche für die Angel** gibt es nur beim Ein-Stück- und beim
-  Zwingengriff: Dort wird das Holz für die Angel aufgeschnitten — seit
-  0.6.0 aber **so tief wie die Angel dick ist** (4,5 mm). Das Holz steht
+* Die **Tasche für die Angel** gibt es beim Ein-Stück-Griff, beim Zwingengriff
+  und bei der Bastion: Dort wird das Holz für die Angel aufgeschnitten — die
+  Tasche sitzt **so tief wie die Angel dick ist** (4,5 mm). Das Holz steht
   daneben fest, es bleibt also eine Klebefläche. Im Modell liegt die Tasche
   in der Mitte der Dicke (z = −2,25 … +2,25 mm), das Holz aussen und
   innen ist massiv.
   *Warum das nicht einfach war:* Der Griffkörper ist ein Loft über Ringe,
   und ein Ring hat an jeder Stelle gleich viele Punkte. Eine flache Nut
-  braucht aber Ringe mit und ohne Nut — der Körper musste also in Gruppen
-  zerfallen (mit Nut, aussen, innen). Dazu kam die Komfortrundung: ihr
-  Keil wird im FreeCAD-Modell als Schnitt gesetzt und muss zum ganzen
-  Körper passen, sonst schneidet er zu viel weg. Beides ist jetzt gelöst.
+  braucht aber an der Vorderkante andere Punkte als der Rest. Deshalb
+  bekommen auch die Ringe ohne Nut dieselbe Zahl Punkte: die Vorderkante
+  wird feiner unterteilt. An den Grenzen der Nut stehen zwei Ringe
+  nebeneinander — dazwischen liegt die Schulter, auf der die Angel
+  aufliegt. Ohne das fehlte im Griff eine ganze Schicht Holz (siehe 5.3).
 * Bei **zwei Griffschalen** gibt es **keine** Tasche: die Angel sitzt in der
   Fuge zwischen den Schalen, die Schalen liegen flach an ihr. Der Plan, der
   DXF und die Druckschablone weisen das auch so aus — im DXF ist der Layer
@@ -377,3 +379,44 @@ geschliffene Form, und FreeCAD verschmilzt Klinge und Angel sauber.
 3D-Ansicht deutlich schmaler als die Klinge, und im Textplan steht
 „Absatz der Klinge schleifen". Bei zwei Schalen bleibt die Klinge am Heft
 voll hoch — dort ist die Angel durchgehend und es wird nichts geschliffen.
+
+### 5.3 Das Holz neben der Angel (ab 0.9.0)
+
+Beim **Ein-Stück-Griff**, beim **Zwingengriff** und bei der **Bastion** liegt
+die Angel in einer Nut im Holz. Bis 0.8.x war diese Nut im Griff **eine
+Lücke von 3,6 mm** auf beiden Seiten der Angel: Das Holz fehlte dort
+vollständig, der Griff war in der Mitte der Dicke auseinander.
+
+Nachgemessen am Standardmaß (Bastion, 22 mm dick, Angel 4,5 mm):
+
+| Bauart | Holzvolumen bis 0.8.x | ab 0.9.0 |
+|---|---|---|
+| Ein-Stück-Griff | 34.456 mm³ | 53.755 mm³ |
+| Bastion | 30.980 mm³ | 49.115 mm³ |
+| Zwinge | 36.405 mm³ | 58.528 mm³ |
+
+Das Holz ist jetzt **ein einziger Körper** statt drei, und es fehlt nichts
+mehr. Der Selbsttest prüft das über das Volumen, der Modeltest prüft, dass
+das Netz **geschlossen** ist (jede Kante gehört zu genau zwei Dreiecken).
+
+**Der Zuschnitt war davon betroffen:** Bei der Bastion wurde das Holz wie
+zwei Schalen gerechnet (2 × 8,8 mm statt 22 mm) — der Rohling wäre rund
+6,5 mm zu dünn gewesen. Jetzt ist der Bastion-Block ein **Block in voller
+Dicke**, und die Dokumente sagen das auch: Textplan, Bauplan, DXF und
+Druckschablone nennen bei zwei Schalen „2 Stück", sonst einen Block.
+
+*Prüfen:* Bauart *Bastion* → der Textplan sagt
+„Zuschnitt: Holzblock 108 × 35 × 24 mm", und im DXF (Layer *SCHALE*) steht
+**eine** Kontur, nicht zwei. Beim Ein-Stück- und beim Zwingengriff steht im
+DXF zusätzlich eine *AUSSPA*-Bahn — die Frässbahn für die Angel.
+
+### 5.4 Das Gewicht (ab 0.9.0)
+
+Das Gewicht im Plan wird jetzt **aus dem Modell gemessen**, nicht aus der
+Kontur gerechnet. Vorher war der Griff bei der Bastion rund **30 % zu
+leicht** (toter Zweig in der Rechnung) und beim Zwingengriff zu schwer, weil
+die Zwinge als voller Klotz statt als Mantel gerechnet wurde.
+
+*Prüfen:* Der Textplan nennt „Holz … g". Das muss zur Größe des Rohlings
+passen: ein Block aus 24 mm dickem Holz wiegt deutlich mehr als zwei
+Schalen aus 11 mm.

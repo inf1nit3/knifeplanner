@@ -303,6 +303,35 @@ pub fn clip_x_min(poly: &[(f64, f64)], grenze: f64) -> Vec<(f64, f64)> {
     out
 }
 
+/// Schneidet ein Polygon an der Ebene x = grenze ab.
+///
+/// Nur der Teil mit x <= grenze bleibt erhalten. Schnittpunkte werden
+/// eingefuegt, damit das Polygon geschlossen und einfach bleibt.
+pub fn clip_x_max(poly: &[(f64, f64)], grenze: f64) -> Vec<(f64, f64)> {
+    let mut out: Vec<(f64, f64)> = Vec::with_capacity(poly.len());
+    let n = poly.len();
+    if n < 3 {
+        return poly.to_vec();
+    }
+    for i in 0..n {
+        let a = poly[i];
+        let b = poly[(i + 1) % n];
+        let a_in = a.0 <= grenze + 1e-9;
+        let b_in = b.0 <= grenze + 1e-9;
+        if a_in {
+            out.push(a);
+        }
+        if a_in != b_in {
+            let dx = b.0 - a.0;
+            if dx.abs() > 1e-12 {
+                let t = ((grenze - a.0) / dx).clamp(0.0, 1.0);
+                out.push((grenze, a.1 + t * (b.1 - a.1)));
+            }
+        }
+    }
+    out
+}
+
 /// Polygon versetzen - positiv zieht nach innen, negativ nach aussen.
 pub fn offset_polygon(poly: &[(f64, f64)], delta: f64) -> Vec<(f64, f64)> {
     crate::mesh::offset(poly, delta)
@@ -785,9 +814,9 @@ pub fn recommend_style(b: &BladeBlank) -> HandleStyle {
 
 /// Schalendicke und Gesamtdicke des Griffes.
 pub fn schalendicken(b: &BladeBlank, p: &HandleParams) -> (f64, f64) {
-    // Bei zweigeteilten Griffen sitzen zwei Schalen um die Angel herum,
-    // bei Ein-Stueck- und Zwingengriffen ist der Holzkoerper ein Block.
-    let two_part = p.style.has_two_scales() || p.style == HandleStyle::Ferrule;
+    // Steht die Angel mitten im Holz, teilt sie die Dicke in zwei Flanken.
+    // Beim Ein-Stueck-Griff ist der ganze Block eine Seite.
+    let two_part = p.style.angel_im_holz();
     let scale_t = match p.scale_thickness_mm {
         Some(v) if v > 0.0 => v,
         _ => {
@@ -889,6 +918,31 @@ pub fn angel_unten(b: &BladeBlank, p: &HandleParams, x: f64) -> Option<f64> {
     }
 }
 
+/// Der Zuschnitt des Holzrohlings.
+///
+/// Der Rohling ist entweder eine Leiste oder zwei. Bei zwei Griffschalen
+/// sind es zwei Stueck: je eine Schale, und dazwischen kommt die Angel aus
+/// Stahl - die braucht ihren Platz und zaehlt nicht zum Holz. Bei allen
+/// anderen Bauarten ist es ein massiver Block.
+#[derive(Clone, Copy, Debug)]
+pub struct Zuschnitt {
+    /// Laenge einer Leiste (mit Schleifzugabe)
+    pub laenge_mm: f64,
+    /// Hoehe einer Leiste (mit Schleifzugabe)
+    pub hoehe_mm: f64,
+    /// Dicke EINES Stuecks (mit Hobelzugabe)
+    pub dicke_mm: f64,
+    /// Wie viele Stuecke geschnitten werden
+    pub stuecke: usize,
+    /// Dicke des Holzes ohne Zugabe - bei zwei Schalen die Summe beider
+    pub holz_dicke_mm: f64,
+}
+
+/// Uebermass zum Schleifen, je Seite
+pub const SCHLEIF_ALLOWANCE: f64 = 2.0;
+/// Uebermass zum Hobeln, je Seite
+pub const HOBEL_ALLOWANCE: f64 = 1.0;
+
 /// Die empfohlene Groesse des Holzleisten fuer den Griff.
 ///
 /// Der Rohling wird mit einem kleinen Uebermass angesetzt: der Holzschnitter
@@ -899,12 +953,7 @@ pub fn zuschnitt(
     params: &HandleParams,
     scale_t: f64,
     total_t: f64,
-) -> (f64, f64, f64) {
-    /// Uebermass zum Schleifen, je Seite
-    const SCHLEIF_ALLOWANCE: f64 = 2.0;
-    /// Uebermass zum Hobeln, je Seite
-    const HOBEL_ALLOWANCE: f64 = 1.0;
-
+) -> Zuschnitt {
     let x_min = outline.iter().map(|q| q.0).fold(f64::MAX, f64::min);
     let x_max = outline.iter().map(|q| q.0).fold(f64::MIN, f64::max);
     let y_min = outline.iter().map(|q| q.1).fold(f64::MAX, f64::min);
@@ -912,13 +961,58 @@ pub fn zuschnitt(
 
     let laenge = (x_max - x_min) + 2.0 * SCHLEIF_ALLOWANCE;
     let hoehe = (y_max - y_min) + 2.0 * SCHLEIF_ALLOWANCE;
-    let holz_dicke = if params.style.has_two_scales() {
-        // Nur die beiden Schalen sind Holz - die Angel dazwischen ist Stahl
-        2.0 * scale_t
+
+    // Wie viele Leisten und wie dick das Holz insgesamt ist.
+    //
+    // Bei zwei Griffschalen ist das Holz zweiteilig: die Angel sitzt in
+    // der Fuge dazwischen und ist aus Stahl. Bei Bastion, Ein-Stueck und
+    // Zwinge ist das Holz ein Block - dort liegt die Angel in einer Nut.
+    let (stuecke, holz_dicke) = if params.style == HandleStyle::FullTangTwoScale {
+        (2, 2.0 * scale_t)
     } else {
-        total_t
-    } + 2.0 * HOBEL_ALLOWANCE;
-    (laenge, hoehe, holz_dicke)
+        (1, total_t)
+    };
+    // Jedes Stueck bekommt den Hobelzugabe auf beiden Seiten.
+    let dicke = holz_dicke / stuecke as f64 + 2.0 * HOBEL_ALLOWANCE;
+
+    Zuschnitt {
+        laenge_mm: laenge,
+        hoehe_mm: hoehe,
+        dicke_mm: dicke,
+        stuecke,
+        holz_dicke_mm: holz_dicke,
+    }
+}
+
+/// Der Weg, der fuer die Angel ins Holz gefraest wird.
+///
+/// `None` heisst: es wird nichts gefraest. Bei zwei Griffschalen sitzt die
+/// Angel in der Fuge dazwischen - die Schalen liegen flach an ihr.
+///
+/// Beim Ein-Stueck- und beim Zwingengriff laeuft die Bahn bis zur
+/// Vorderkante. Bei der Bastion sitzt die Angel vorn im Metall; die Bahn
+/// beginnt deshalb erst dort, wo das Holz beginnt.
+pub fn tang_nut_path(
+    params: &HandleParams,
+    outline: &[(f64, f64)],
+    recess: &[(f64, f64)],
+) -> Option<Vec<(f64, f64)>> {
+    // Die Bahn endet mit dem Holz. Ohne das ragte sie um den Klebespalt
+    // ueber die Rueckwand hinaus.
+    let holz_ende = outline.iter().map(|q| q.0).fold(f64::MIN, f64::max);
+    let pfad = match params.style {
+        HandleStyle::FullTangTwoScale => return None,
+        HandleStyle::PartialTangBolster => {
+            // Die Angel sitzt vorn im Metall - die Bahn beginnt erst dort,
+            // wo das Holz beginnt.
+            let holz_start = outline.first().map(|q| q.0).unwrap_or(0.0);
+            let mut pfad = clip_x_min(recess, holz_start);
+            pfad.reverse();
+            pfad
+        }
+        HandleStyle::OnePiece | HandleStyle::Ferrule => slot_path(recess),
+    };
+    Some(clip_x_max(&pfad, holz_ende))
 }
 
 /// Erzeugt die komplette Griffgeometrie.
@@ -939,7 +1033,7 @@ pub fn build_geometry(b: &BladeBlank, p: &HandleParams) -> HandleGeometry {
     // Schalendicke
     let (scale_t, total_t) = schalendicken(b, p);
 
-    if scale_t <= 2.6 && p.style.has_two_scales() {
+    if scale_t <= 2.6 && p.style.angel_im_holz() {
         warnings.push(format!(
             "Die Schalendicke liegt bei nur {}. Unter 2,6 mm reißt Holz beim \
              Anziehen der Vorsteckbolzen aus - dickeres Holz oder Epoxy- und Reibnieten-\
@@ -950,7 +1044,7 @@ pub fn build_geometry(b: &BladeBlank, p: &HandleParams) -> HandleGeometry {
 
     // Holz ausserhalb der Angel
     let wood_outside = scale_t - b.tang_thickness_mm - p.glue_gap_mm;
-    if p.style.has_two_scales() && wood_outside < 1.5 {
+    if p.style.angel_im_holz() && wood_outside < 1.5 {
         warnings.push(format!(
             "Außerhalb der Angel bleiben nur {} Holz. Unter 1,5 mm ist die \
              Schale zu schwach - schmalere Angel, dünneres Holz oder Epoxy- statt Stift-\
@@ -972,7 +1066,7 @@ pub fn build_geometry(b: &BladeBlank, p: &HandleParams) -> HandleGeometry {
         Some((o, u)) => o - u,
         None => 0.0,
     };
-    let angel_durch_holz = p.style.has_two_scales() || p.style == HandleStyle::Ferrule;
+    let angel_durch_holz = p.style.angel_im_holz();
     if angel_durch_holz && klingen_hoehe - angel_hoehe > 1.0 {
         let ueberhang = (klingen_hoehe - angel_hoehe) / 2.0;
         warnings.insert(
@@ -1092,12 +1186,16 @@ pub fn build_geometry(b: &BladeBlank, p: &HandleParams) -> HandleGeometry {
         ),
     }
 
-    // Materialvolumen einer Schale: Flaeche des Profils * Schalendicke
+    // Materialvolumen: Flaeche des Profils * Schalendicke
     let area = polygon_area(&outline);
     let volume = area * scale_t;
 
     // Die Ringe des Griffkoerpers fuer den 3D-Export
     let bodies = build_bodies(b, p, &outline, &recess, scale_t, total_t, 6);
+    // Das Holzvolumen aus dem Modell - die Kontur allein taugt nicht:
+    // der Griff verjuengt sich, die Kanten sind gerundet und die Nut
+    // fuer die Angel nimmt Holz weg.
+    let holzvolumen = holzvolumen(&bodies);
 
     let mut metrics = vec![
         ("grifffaenge_mm".to_string(), round1(length)),
@@ -1108,6 +1206,19 @@ pub fn build_geometry(b: &BladeBlank, p: &HandleParams) -> HandleGeometry {
         ("wandstaerke_mm".to_string(), round1(p.wall_min_mm)),
         ("holz_ausserhalb_angel_mm".to_string(), round1(wood_outside)),
         ("schalenvolumen_mm3".to_string(), volume.round()),
+        ("holzvolumen_mm3".to_string(), holzvolumen.round()),
+        (
+            "holzstuecke".to_string(),
+            p.style.holzstuecke() as f64,
+        ),
+        (
+            "holz_dicke_mm".to_string(),
+            round1(if p.style.hat_zwei_schalen() {
+                scale_t
+            } else {
+                total_t
+            }),
+        ),
         (
             "anker_anzahl".to_string(),
             pins.iter().filter(|p| p.kind == "through").count() as f64,
@@ -1115,15 +1226,25 @@ pub fn build_geometry(b: &BladeBlank, p: &HandleParams) -> HandleGeometry {
     ];
 
     // Der Zuschnitt: so gross muss der Holzleisten sein
-    let (z_laenge, z_hoehe, z_dicke) = zuschnitt(&outline, p, scale_t, total_t);
-    metrics.push(("zuschnitt_laenge_mm".to_string(), round1(z_laenge)));
-    metrics.push(("zuschnitt_hoehe_mm".to_string(), round1(z_hoehe)));
-    metrics.push(("zuschnitt_dicke_mm".to_string(), round1(z_dicke)));
+    let zuschnitt = zuschnitt(&outline, p, scale_t, total_t);
+    metrics.push(("zuschnitt_laenge_mm".to_string(), round1(zuschnitt.laenge_mm)));
+    metrics.push(("zuschnitt_hoehe_mm".to_string(), round1(zuschnitt.hoehe_mm)));
+    metrics.push(("zuschnitt_dicke_mm".to_string(), round1(zuschnitt.dicke_mm)));
+    metrics.push(("zuschnitt_stuecke".to_string(), zuschnitt.stuecke as f64));
+    metrics.push((
+        "zuschnitt_holz_dicke_mm".to_string(),
+        round1(zuschnitt.holz_dicke_mm),
+    ));
+
+    // Die Nut, die fuer die Angel ins Holz gefraest wird. Bei zwei
+    // Schalen gibt es keine - die Angel sitzt in der Fuge dazwischen.
+    let tang_nut = tang_nut_path(p, &outline, &recess);
 
     HandleGeometry {
         outline,
         tang_profile: tang,
         recess,
+        tang_nut,
         pins,
         scale_thickness_mm: scale_t,
         total_thickness_mm: total_t,
@@ -1822,7 +1943,11 @@ pub fn body_rings(
         (1.0 - (z.abs() / span.max(0.5)).clamp(0.0, 1.0)).powf(1.5)
     };
 
-    let mut rings: Vec<Ring> = Vec::new();
+    // Wie hoch die Schulter an der Angel liegt. Der Uebergang vom vollen
+    // Ring zum Ring mit der Nut braucht eine kleine Stufe: zwei Ringe auf
+    // genau gleicher Hoehe kann der Loft in FreeCAD nicht verarbeiten.
+    const SCHULTER_HOEHE: f64 = 0.05;
+
 
     // Die Schnitte von oben nach unten: die Fase am oberen Rand, der
     // gerade Teil in mehreren Schritten und die Fase am unteren Rand.
@@ -1878,7 +2003,21 @@ pub fn body_rings(
         schnitte.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
     }
 
-    for (z, inset) in schnitte {
+    // Die Ringe: der volle Ring und - wo die Nut liegt - der Ring mit
+    // der Nut.
+    //
+    // Die Nut ersetzt die Vorderkante. Damit der Loft darueber laufen
+    // kann, bekommen auch die Ringe ohne Nut dieselbe Zahl Punkte: die
+    // Vorderkante wird feiner unterteilt. An den Grenzen der Nut stehen
+    // beide Ringe nebeneinander - dazwischen liegt die Schulter, auf der
+    // die Angel liegt. Ohne diese Doppelringe fehlte im Griff eine ganze
+    // Schicht Holz neben der Angel.
+    let n_front = nut.map(|n| n.pfad.len()).unwrap_or(0);
+
+    // Der volle Ring auf der Hoehe z. Die Vorderkante wird feiner
+    // unterteilt, damit die Ringe mit und ohne Nut gleich viele Punkte
+    // haben.
+    let bau_ring = |z: f64, inset: f64| -> Ring {
         let base = if inset > 1e-6 {
             crate::mesh::offset(outline, inset)
         } else {
@@ -1890,14 +2029,53 @@ pub fn body_rings(
         } else {
             0.0
         };
-        let ring: Ring = base
+        let mut ring: Ring = base
             .iter()
             .map(|&pt| {
                 let x = pt.0;
                 shape_point(pt, top_at(x), bot_at(x), &spec, g, kg, taper_at(x), z, k_bauch, k_ruecken)
             })
             .collect();
-        rings.push(ring);
+        if n_front > 0 {
+            // Die Vorderkante: vom unteren zum oberen Vorderrandpunkt.
+            let p0 = ring[0];
+            let p1 = ring[1];
+            let mut vorder: Ring = Vec::with_capacity(n_front);
+            for k in 1..=n_front {
+                let t = k as f64 / (n_front + 1) as f64;
+                vorder.push((
+                    p0.0 + (p1.0 - p0.0) * t,
+                    p0.1 + (p1.1 - p0.1) * t,
+                    p0.2 + (p1.2 - p0.2) * t,
+                ));
+            }
+            let mut neu: Ring = Vec::with_capacity(ring.len() + n_front);
+            neu.push(p0);
+            neu.extend(vorder);
+            neu.extend(ring[1..].iter().copied());
+            ring = neu;
+        }
+        ring
+    };
+
+    // Die Schulter braucht eine kleine Hoehe: der Uebergang vom vollen
+    // Ring zum Ring mit der Nut. Zwei Ringe auf genau gleicher Hoehe
+    // kann der Loft in FreeCAD nicht verarbeiten. Die Hoehe darf aber
+    // nicht mit einem vorhandenen Schnitt zusammenfallen.
+    let schulter_hoehe = |z: f64, nach_unten: bool| -> f64 {
+        let mut h = SCHULTER_HOEHE;
+        for (zz, _) in schnitte.iter() {
+            let d = if nach_unten { z - *zz } else { *zz - z };
+            if d > 1e-9 && d < h * 2.0 {
+                h = d / 2.0;
+            }
+        }
+        h.max(0.002)
+    };
+    let (mut schulter_oben, mut schulter_unten) = (SCHULTER_HOEHE, SCHULTER_HOEHE);
+    if let Some(n) = nut {
+        schulter_oben = schulter_hoehe(n.z_bis, false);
+        schulter_unten = schulter_hoehe(n.z_von, true);
     }
 
     // Die Nut wird nicht gestaucht - sie muss exakt zur Angel passen.
@@ -1907,43 +2085,44 @@ pub fn body_rings(
     // Nutspitze, oben heraus) und dann weiter ueber die Aussenkontur.
     // Haengt man die Nut hinten an, schneidet sie die Kontur diagonal
     // durch - der Ring waere dann keine einfache Flaeche mehr.
-    //
-    // Die Nut reicht nur so tief wie die Angel dick ist. Darunter bleibt
-    // das Holz stehen: das ist die Klebeflaeche neben der Angel. Deshalb
-    // zerfaellt der Koerper in Gruppen - die mit der Nut und die ohne.
-    let mut gruppen: Vec<Vec<Ring>> = Vec::new();
-    let mut aktuell: Vec<Ring> = Vec::new();
-    let mut mit_nut = false;
-    for mut ring in rings {
-        let z = ring[0].2;
-        let gehoert = nut.map(|n| n.enthaelt(z)).unwrap_or(false);
-        if !aktuell.is_empty() && gehoert != mit_nut {
-            gruppen.push(std::mem::take(&mut aktuell));
-        }
-        mit_nut = gehoert;
-        if gehoert {
-            let n = nut.expect("gehoert nur mit Nut");
-            let shaped: Vec<(f64, f64, f64)> = ring
-                .iter()
-                .take(outline.len())
-                .cloned()
-                .collect();
-            if shaped.len() >= 2 {
-                let mut merged: Vec<(f64, f64, f64)> =
-                    Vec::with_capacity(shaped.len() + n.pfad.len());
-                merged.push(shaped[0]);
-                merged.extend(n.pfad.iter().map(|&(x, y)| (x, y, z)));
-                merged.extend(shaped[1..].iter().copied());
-                ring = merged;
+    let mut ringe: Vec<Ring> = Vec::with_capacity(schnitte.len() + 2);
+    for (z, inset) in schnitte {
+        let voll = bau_ring(z, inset);
+        let mit_nut = match nut {
+            Some(n) if n.enthaelt(z) => {
+                // Die Vorderkante weicht der Nut.
+                let p0 = voll[0];
+                let mut m: Ring = Vec::with_capacity(voll.len());
+                m.push(p0);
+                m.extend(n.pfad.iter().map(|&(x, y)| (x, y, z)));
+                m.extend(voll[n_front + 1..].iter().copied());
+                Some(m)
+            }
+            _ => None,
+        };
+        // An den Grenzen der Nut steht der volle Ring neben dem Ring mit
+        // der Nut: dazwischen liegt die Schulter, auf der die Angel
+        // aufliegt.
+        if let Some(n) = nut {
+            if (z - n.z_bis).abs() < 1e-6 {
+                ringe.push(bau_ring(n.z_bis + schulter_oben, 0.0));
+                ringe.push(mit_nut.expect("Ring mit Nut"));
+                continue;
+            }
+            if (z - n.z_von).abs() < 1e-6 {
+                ringe.push(mit_nut.expect("Ring mit Nut"));
+                ringe.push(bau_ring(n.z_von - schulter_unten, 0.0));
+                continue;
             }
         }
-        aktuell.push(ring);
-    }
-    if !aktuell.is_empty() {
-        gruppen.push(aktuell);
+        match mit_nut {
+            Some(m) => ringe.push(m),
+            None => ringe.push(voll),
+        }
     }
 
-    gruppen
+    // Der Koerper ist ein Loft durch alle Ringe.
+    vec![ringe]
 }
 
 /// Baut die Ringe der Griffkoerper je nach Bauart.
@@ -1958,8 +2137,6 @@ fn build_bodies(
 ) -> Vec<Vec<Vec<(f64, f64, f64)>>> {
     let r = p.edge_break_mm.clamp(0.3, scale_t * 0.45);
     let mut bodies: Vec<Vec<Vec<(f64, f64, f64)>>> = Vec::new();
-    // Die Nut fuer die Angel - dort, wo die Angel im Holz liegt
-    let path = slot_path(recess);
 
     // Die halbe Dicke der Angel: so tief reicht die Nut im Holz.
     let tang_t = b.tang_thickness_mm;
@@ -1987,21 +2164,11 @@ fn build_bodies(
             // sonst stecken Holz und Stahl ineinander und der Griff ist
             // an dieser Stelle nicht baubar. Die Nut beginnt dort, wo das
             // Holz beginnt.
-            let nut: Option<Nut> = if p.style == HandleStyle::Ferrule {
-                Some(Nut {
-                    pfad: path.clone(),
-                    z_von: -tang_t / 2.0,
-                    z_bis: tang_t / 2.0,
-                })
-            } else {
-                let holz_start = outline.first().map(|q| q.0).unwrap_or(0.0);
-                let pfad = clip_x_min(&recess, holz_start);
-                Some(Nut {
-                    pfad: pfad.into_iter().rev().collect(),
-                    z_von: -tang_t / 2.0,
-                    z_bis: tang_t / 2.0,
-                })
-            };
+            let nut = tang_nut_path(p, outline, recess).map(|pfad| Nut {
+                pfad,
+                z_von: -tang_t / 2.0,
+                z_bis: tang_t / 2.0,
+            });
             for g in body_rings(
                 b,
                 p,
@@ -2019,19 +2186,18 @@ fn build_bodies(
             }
         }
         HandleStyle::OnePiece => {
-            // Der Ein-Stueck-Griff hat zusaetzlich die Nut fuer die Angel.
             // Der Ein-Stueck-Griff: die Angel liegt in einer Nut, die von
             // der Vorderkante aus gefraest wird.
-            let nut = Nut {
-                pfad: path.clone(),
+            let nut = tang_nut_path(p, outline, recess).map(|pfad| Nut {
+                pfad,
                 z_von: -tang_t / 2.0,
                 z_bis: tang_t / 2.0,
-            };
+            });
             for g in body_rings(
                 b,
                 p,
                 outline,
-                Some(&nut),
+                nut.as_ref(),
                 total_t / 2.0,
                 -total_t / 2.0,
                 total_t / 2.0,
@@ -2045,6 +2211,18 @@ fn build_bodies(
         }
     }
     bodies
+}
+
+/// Das Volumen des Holzkoerpers - direkt aus dem Modell gemessen.
+///
+/// Die Kontur allein taugt dafuer nicht: der Griff verjuengt sich zum
+/// Ende hin, die Kanten sind abgerundet und die Nut fuer die Angel nimmt
+/// Holz weg. Nur das Modell weiss die wahre Zahl.
+pub fn holzvolumen(bodies: &[Vec<Vec<(f64, f64, f64)>>]) -> f64 {
+    bodies
+        .iter()
+        .map(|body| crate::mesh::volume(&crate::mesh::loft(body)))
+        .sum()
 }
 
 /// Verschiebt alle Ringe um dz in z.
@@ -2136,6 +2314,38 @@ mod ring_tests {
                         "Doppelter Schnitt bei {style:?}: {} und {}",
                         zs[i - 1],
                         zs[i]
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn der_griffkoerper_ist_geschlossen() {
+        // Ein Loch im Netz - eine fehlende Holzschicht - zeigt sich hier:
+        // jede Kante muss von genau zwei Dreiecken benutzt werden.
+        //
+        // So ist der Fehler aufgetreten, der im Griff neben der Angel
+        // eine ganze Schicht Holz verschwinden liess.
+        use std::collections::HashMap;
+        for style in HandleStyle::all() {
+            let b = BladeBlank::default();
+            let mut p = HandleParams::default();
+            p.style = style;
+            let geo = build_geometry(&b, &p);
+            for body in &geo.bodies {
+                let mesh = crate::mesh::loft(body);
+                let mut kanten: HashMap<(usize, usize), i32> = HashMap::new();
+                for &(a, b, c) in &mesh.faces {
+                    for (u, v) in [(a, b), (b, c), (c, a)] {
+                        let e = if u < v { (u, v) } else { (v, u) };
+                        *kanten.entry(e).or_insert(0) += 1;
+                    }
+                }
+                for (e, n) in kanten {
+                    assert_eq!(
+                        n, 2,
+                        "Bauart {style:?}: Kante {e:?} wird {n}-mal benutzt - das Netz ist offen"
                     );
                 }
             }
@@ -2413,23 +2623,126 @@ mod zuschnitt_tests {
         let b = BladeBlank::default();
         let p = HandleParams::default();
         let geo = build_geometry(&b, &p);
-        let (laenge, hoehe, dicke) = zuschnitt(&geo.outline, &p, geo.scale_thickness_mm, geo.total_thickness_mm);
+        let z = zuschnitt(&geo.outline, &p, geo.scale_thickness_mm, geo.total_thickness_mm);
         let x_min = geo.outline.iter().map(|q| q.0).fold(f64::MAX, f64::min);
         let x_max = geo.outline.iter().map(|q| q.0).fold(f64::MIN, f64::max);
         let y_min = geo.outline.iter().map(|q| q.1).fold(f64::MAX, f64::min);
         let y_max = geo.outline.iter().map(|q| q.1).fold(f64::MIN, f64::max);
         // Der Zuschnitt muss groesser sein als die Kontur
-        assert!(laenge > x_max - x_min, "Zu kurz: {laenge}");
-        assert!(hoehe > y_max - y_min, "Zu niedrig: {hoehe}");
+        assert!(z.laenge_mm > x_max - x_min, "Zu kurz: {}", z.laenge_mm);
+        assert!(z.hoehe_mm > y_max - y_min, "Zu niedrig: {}", z.hoehe_mm);
         // Aber nur mit vernuenftigem Uebermass
-        assert!(laenge < x_max - x_min + 10.0, "Zu viel Zugabe: {laenge}");
-        assert!(hoehe < y_max - y_min + 10.0, "Zu viel Zugabe: {hoehe}");
+        assert!(z.laenge_mm < x_max - x_min + 10.0, "Zu viel Zugabe");
+        assert!(z.hoehe_mm < y_max - y_min + 10.0, "Zu viel Zugabe");
         // Bei zwei Schalen ist die Angel aus Stahl - das Holz ist duenner
         assert!(
-            dicke < geo.total_thickness_mm,
-            "Das Holz ist dicker als der ganze Griff: {dicke}"
+            z.dicke_mm < geo.total_thickness_mm,
+            "Das Holz ist dicker als der ganze Griff: {}",
+            z.dicke_mm
         );
-        assert!(dicke > 4.0, "Das Holz ist zu duenn: {dicke}");
+        assert!(z.dicke_mm > 4.0, "Das Holz ist zu duenn: {}", z.dicke_mm);
+    }
+
+    #[test]
+    fn zwei_schalen_brauchen_zwei_leisten() {
+        let b = BladeBlank::default();
+        let mut p = HandleParams::default();
+        p.style = HandleStyle::FullTangTwoScale;
+        let geo = build_geometry(&b, &p);
+        let z = zuschnitt(&geo.outline, &p, geo.scale_thickness_mm, geo.total_thickness_mm);
+        assert_eq!(z.stuecke, 2);
+        // Jede Schale ist so dick wie eine Flanke, plus Hobelzugabe
+        assert!((z.dicke_mm - geo.scale_thickness_mm - 2.0).abs() < 0.01);
+        // Beide Schalen zusammen sind so dick wie der Griff ohne die Angel
+        assert!((z.holz_dicke_mm - 2.0 * geo.scale_thickness_mm).abs() < 0.01);
+        assert!((z.holz_dicke_mm + b.tang_thickness_mm - geo.total_thickness_mm).abs() < 0.01);
+    }
+
+    #[test]
+    fn blockbauarten_brauchen_einen_block() {
+        let b = BladeBlank::default();
+        for style in [
+            HandleStyle::PartialTangBolster,
+            HandleStyle::OnePiece,
+            HandleStyle::Ferrule,
+        ] {
+            let mut p = HandleParams::default();
+            p.style = style;
+            let geo = build_geometry(&b, &p);
+            let z = zuschnitt(&geo.outline, &p, geo.scale_thickness_mm, geo.total_thickness_mm);
+            assert_eq!(z.stuecke, 1, "Bauart {style:?} braucht mehr als ein Stueck");
+            // Der Block ist so dick wie der Griff, plus Hobelzugabe
+            assert!(
+                (z.dicke_mm - geo.total_thickness_mm - 2.0).abs() < 0.01,
+                "Bauart {style:?}: {} statt {}",
+                z.dicke_mm,
+                geo.total_thickness_mm + 2.0
+            );
+        }
+    }
+
+    #[test]
+    fn die_bastion_braucht_einen_block_nicht_zwei_schalen() {
+        // Die Bastion hat ein Bastion und ein Holzstueck dahinter. Das
+        // Holz ist ein Block - es wird nicht gespiegelt geschnitten.
+        let b = BladeBlank::default();
+        let mut p = HandleParams::default();
+        p.style = HandleStyle::PartialTangBolster;
+        let geo = build_geometry(&b, &p);
+        let z = zuschnitt(&geo.outline, &p, geo.scale_thickness_mm, geo.total_thickness_mm);
+        assert_eq!(z.stuecke, 1);
+        assert!(
+            z.dicke_mm > geo.scale_thickness_mm + 2.0,
+            "Der Block waere zu duenn: {}",
+            z.dicke_mm
+        );
+    }
+
+    #[test]
+    fn nur_bei_zwei_schalen_gibt_es_keine_frassbahn() {
+        let b = BladeBlank::default();
+        for style in HandleStyle::all() {
+            let mut p = HandleParams::default();
+            p.style = style;
+            let geo = build_geometry(&b, &p);
+            match style {
+                // Die Angel sitzt in der Fuge - die Schalen liegen flach
+                // an ihr, da wird nichts ausgefraest.
+                HandleStyle::FullTangTwoScale => assert!(
+                    geo.tang_nut.is_none(),
+                    "Bei zwei Schalen darf keine Frassbahn entstehen"
+                ),
+                // Bei allen anderen Bauarten wird die Angel ausgespart.
+                _ => {
+                    let nut = geo.tang_nut.as_ref().expect("Frassbahn fehlt");
+                    assert!(nut.len() >= 3, "Frassbahn ist zu kurz");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn die_frassbahn_der_bastion_beginnt_am_holz() {
+        // Vorn sitzt die Angel im Metall - die Frassbahn darf erst dort
+        // beginnen, wo das Holz beginnt.
+        let b = BladeBlank::default();
+        let mut p = HandleParams::default();
+        p.style = HandleStyle::PartialTangBolster;
+        let geo = build_geometry(&b, &p);
+        let nut = geo.tang_nut.as_ref().expect("Frassbahn fehlt");
+        let holz_start = geo.outline.first().map(|q| q.0).unwrap_or(0.0);
+        let vorn = nut.iter().map(|q| q.0).fold(f64::MAX, f64::min);
+        assert!(
+            vorn >= holz_start - 0.01,
+            "Die Frassbahn beginnt bei {vorn}, das Holz bei {holz_start}"
+        );
+        // Und sie muss auch wirklich im Holz liegen.
+        let holz_ende = geo.outline.iter().map(|q| q.0).fold(f64::MIN, f64::max);
+        let hinten = nut.iter().map(|q| q.0).fold(f64::MIN, f64::max);
+        assert!(
+            hinten <= holz_ende + 0.01,
+            "Die Frassbahn endet bei {hinten}, das Holz bei {holz_ende}"
+        );
     }
 }
 

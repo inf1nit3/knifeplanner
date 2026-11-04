@@ -1,10 +1,11 @@
 //! DXF-Export der Griffschalen (R12 / AC1009, ASCII).
 //!
 //! Layer:
-//!   SCHALE      - Aussenkontur der Griffschale (Zuschnitt, 1:1 in mm)
+//!   SCHALE      - Aussenkontur des Holzrohlings (Zuschnitt, 1:1 in mm)
 //!   ANGEL       - Angelprofil als Referenzlage
 //!   AUSSPA      - Aussparung (Angel + Klebespalt)
 //!   BOHRUNGEN   - Bohrkonturen der Vorsteckbolzen, Reibnieten, Lanyardloch
+//!   METALL      - Kontur von Bastion bzw. Zwinge (kein Holz!)
 //!   TEXT        - Beschriftung
 
 use std::fmt::Write as _;
@@ -21,6 +22,7 @@ const LAYERS: &[(&str, i32)] = &[
     ("ANGEL", 3),
     ("AUSSPA", 5),
     ("BOHRUNGEN", 1),
+    ("METALL", 8),
     ("TEXT", 2),
 ];
 
@@ -71,7 +73,7 @@ pub fn build_dxf(
     }
     out.push_str("0\nENDTAB\n0\nENDSEC\n0\nSECTION\n2\nENTITIES\n");
 
-    let two_scales = params.style.has_two_scales();
+    let two_scales = params.style.hat_zwei_schalen();
     // Die zweite Schale liegt spiegelbildlich (an der Angelmitte gespiegelt)
     // unter der ersten, mit 12 mm Abstand zum Beschnitt.
     let mirror_dy = if two_scales {
@@ -100,14 +102,16 @@ pub fn build_dxf(
         // Die Aussparung gibt es nur dort, wo das Holz wirklich fuer die
         // Angel aufgeschnitten wird. Bei zwei Schalen sitzt die Angel in
         // der Fuge dazwischen - dort waere eine Frassbahn ein Fehler.
-        if params.style.hat_angelnut() {
-            polyline(&mut out, "AUSSPA", &map(&geo.recess), true);
+        if let Some(nut) = &geo.tang_nut {
+            polyline(&mut out, "AUSSPA", &map(nut), true);
         }
+        // Bastion und Zwinge sind Metall - sie stehen auf eigener Layer,
+        // damit sie beim Zuschnitt nicht mitgeschnitten werden.
         if let Some(b) = &geo.bolster_profile {
-            polyline(&mut out, "SCHALE", &map(b), true);
+            polyline(&mut out, "METALL", &map(b), true);
         }
         if let Some(f) = &geo.ferrule_profile {
-            polyline(&mut out, "SCHALE", &map(f), true);
+            polyline(&mut out, "METALL", &map(f), true);
         }
 
         // Die Bohrungen liegen auf der Angelmittenlinie - in jeder Schale an
@@ -123,16 +127,32 @@ pub fn build_dxf(
     }
 
     // Beschriftung
-    let (z_laenge, z_hoehe, z_dicke) = crate::geometry::zuschnitt(
+    let z = crate::geometry::zuschnitt(
         &geo.outline,
         params,
         geo.scale_thickness_mm,
         geo.total_thickness_mm,
     );
+    let holz = if z.stuecke == 2 {
+        format!("2 Schalen à {:.1} mm", geo.scale_thickness_mm)
+    } else {
+        format!("1 Block, {:.1} mm", geo.total_thickness_mm)
+    };
+    let zuschnitt_text = if z.stuecke == 2 {
+        format!(
+            "{:.0} x {:.0} x {:.0} mm, {} Stück",
+            z.laenge_mm, z.hoehe_mm, z.dicke_mm, z.stuecke
+        )
+    } else {
+        format!(
+            "{:.0} x {:.0} x {:.0} mm",
+            z.laenge_mm, z.hoehe_mm, z.dicke_mm
+        )
+    };
     let label = format!(
-        "{} | Schalendicke {:.1} mm | Angel {:.1} x {:.1} mm | {} | Zuschnitt Holzleiste {:.0} x {:.0} x {:.0} mm",
+        "{} | {} | Angel {:.1} x {:.1} mm | {} | Zuschnitt {}",
         material.material_name,
-        geo.scale_thickness_mm,
+        holz,
         crate::geometry::angel_hoehe_am_heft(blank, params),
         blank.tang_thickness_mm,
         match params.style {
@@ -141,9 +161,7 @@ pub fn build_dxf(
             HandleStyle::OnePiece => "Ein-Stueck-Griff",
             HandleStyle::Ferrule => "Holzgriff mit Zwinge",
         },
-        z_laenge,
-        z_hoehe,
-        z_dicke
+        zuschnitt_text
     );
     text(&mut out, "TEXT", 0.0, geo.tang_profile[0].1 + 14.0, 3.0, &label);
 
@@ -191,4 +209,53 @@ pub fn tang_width_at(geo: &HandleGeometry, x: f64) -> f64 {
 /// Rahmen fuer die 2D-Ausgabe.
 pub fn frame_for(geo: &HandleGeometry, blank: &BladeBlank) -> Frame {
     Frame::from_geometry(geo, blank)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::HandleParams;
+    use crate::plan::DesignPlan;
+
+    fn dxf_fuer(stil: HandleStyle) -> String {
+        let blank = BladeBlank::default();
+        let mut params = HandleParams::default();
+        params.style = stil;
+        let plan = DesignPlan::build(&blank, &params, "walnuss");
+        build_dxf(&plan.geometry, &blank, &params, &plan.verdict)
+    }
+
+    /// Zaehlt die Polylinien auf einer Layer.
+    fn anzahl(dxf: &str, layer: &str) -> usize {
+        dxf.matches(&format!("0\nPOLYLINE\n8\n{layer}\n")).count()
+    }
+
+    #[test]
+    fn zwei_schalen_werden_zweimal_geschnitten_ohne_frassbahn() {
+        let dxf = dxf_fuer(HandleStyle::FullTangTwoScale);
+        assert_eq!(anzahl(&dxf, "SCHALE"), 2, "Es sind zwei gleiche Schalen");
+        // Bei zwei Schalen sitzt die Angel in der Fuge - da wird nichts
+        // ausgefraest.
+        assert_eq!(anzahl(&dxf, "AUSSPA"), 0);
+    }
+
+    #[test]
+    fn die_bastion_ist_ein_block_mit_frassbahn() {
+        let dxf = dxf_fuer(HandleStyle::PartialTangBolster);
+        // Das Holz ist ein Block - also eine Kontur, nicht zwei.
+        assert_eq!(anzahl(&dxf, "SCHALE"), 1, "Die Bastion ist ein Block");
+        // Die Angel laeuft durch das Holz - da muss eine Bahn stehen.
+        assert_eq!(anzahl(&dxf, "AUSSPA"), 1, "Die Frassbahn fehlt");
+        // Die Bastion selbst ist Metall - sie steht auf eigener Layer.
+        assert_eq!(anzahl(&dxf, "METALL"), 1);
+    }
+
+    #[test]
+    fn ein_stueck_und_zwinge_brauchen_einen_block_mit_frassbahn() {
+        for stil in [HandleStyle::OnePiece, HandleStyle::Ferrule] {
+            let dxf = dxf_fuer(stil);
+            assert_eq!(anzahl(&dxf, "SCHALE"), 1, "Bauart {stil:?}: ein Block");
+            assert_eq!(anzahl(&dxf, "AUSSPA"), 1, "Bauart {stil:?}: Frassbahn");
+        }
+    }
 }

@@ -951,16 +951,23 @@ impl App {
                     }
                 });
                 ui.small("DXF (Schalen), SVG, STL, OBJ/MTL, 3D-PNG, Bohrplan-PDF, Bauplan-PDF, Text");
-                let (z_laenge, z_hoehe, z_dicke) = crate::geometry::zuschnitt(
+                let z = crate::geometry::zuschnitt(
                     &self.plan.geometry.outline,
                     &self.params,
                     self.plan.geometry.scale_thickness_mm,
                     self.plan.geometry.total_thickness_mm,
                 );
-                ui.small(format!(
-                    "Zuschnitt: Holzleiste {:.0} x {:.0} x {:.0} mm",
-                    z_laenge, z_hoehe, z_dicke
-                ));
+                if z.stuecke == 2 {
+                    ui.small(format!(
+                        "Zuschnitt: Holzleiste {:.0} x {:.0} x {:.0} mm, {} Stück",
+                        z.laenge_mm, z.hoehe_mm, z.dicke_mm, z.stuecke
+                    ));
+                } else {
+                    ui.small(format!(
+                        "Zuschnitt: Holzblock {:.0} x {:.0} x {:.0} mm",
+                        z.laenge_mm, z.hoehe_mm, z.dicke_mm
+                    ));
+                }
 
                 // Datenblaetter anhaengen - typisch das Lieferdatenblatt
                 // des Klingenstahls. Sie wandern beim Export mit in den

@@ -73,7 +73,6 @@ pub fn build_parts(
 ) -> Vec<Part> {
     let mut parts: Vec<Part> = Vec::new();
     let tang_t = blank.tang_thickness_mm;
-    let gap = params.glue_gap_mm;
 
     let wood = wood_color(material);
     let steel = [0.58, 0.60, 0.64];
@@ -194,23 +193,19 @@ pub fn build_parts(
     }
 
     // Aussparung fuer die Angel (Frassbahn) als eigenes Volumen.
-    // Bei zwei Schalen sitzt je eine Tasche in der Innenflaeche, vom
-    // Angelmass plus Klebespalt tief.
-    let pocket = match params.style {
-        HandleStyle::FullTangTwoScale => {
-            let depth = tang_t + gap;
-            let right = prism(&geo.recess, tang_t / 2.0, tang_t / 2.0 + depth);
-            let left = prism(&geo.recess, -(tang_t / 2.0 + depth), -tang_t / 2.0);
-            merge(&[right, left])
-        }
-        _ => prism(&geo.recess, -tang_t / 2.0, tang_t / 2.0),
-    };
-    parts.push(Part {
-        mesh: pocket,
-        color: [0.25, 0.25, 0.28],
-        name: "Aussparung",
-        kind: PartKind::Cavity,
-    });
+    //
+    // Bei zwei Schalen sitzt die Angel in der Fuge dazwischen - die
+    // Schalen liegen flach an ihr, es wird nichts gefraest. Bei allen
+    // anderen Bauarten wird die Bahn gefraest; sie ist so breit wie die
+    // Angel dick und folgt exakt dem Weg aus dem Modell.
+    if let Some(nut) = &geo.tang_nut {
+        parts.push(Part {
+            mesh: prism(nut, -tang_t / 2.0, tang_t / 2.0),
+            color: [0.25, 0.25, 0.28],
+            name: "Aussparung",
+            kind: PartKind::Cavity,
+        });
+    }
 
     parts
 }

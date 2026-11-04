@@ -141,11 +141,10 @@ pub fn sammle_daten(plan: &DesignPlan, blank: &BladeBlank, params: &HandleParams
     // Die Ringe ohne Verjuengung: der Loft braucht ebene Schnitte.
     // Die Verjuengung kommt danach als Schnitt mit einem Keil dazu.
     let mut ringe = crate::geometry::griff_ringe_ebene(blank, params);
-    let n_slot = if params.style == crate::model::HandleStyle::OnePiece {
-        crate::geometry::slot_path(&g.recess).len()
-    } else {
-        0
-    };
+    // Die Nut fuer die Angel: sie liegt an der Vorderkante. Ihre Punkte
+    // muessen zu den uebrigen Punkten passen - sonst stimmen die Ringe
+    // nicht mehr uebereinander.
+    let n_slot = g.tang_nut.as_ref().map(|p| p.len()).unwrap_or(0);
     for body in ringe.iter_mut() {
         for ring in body.iter_mut() {
             *ring = verdichte_ring(ring, n_slot);

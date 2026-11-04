@@ -88,20 +88,25 @@ impl DesignPlan {
         out.push_str(&"=".repeat(64));
         out.push('\n');
         out.push_str(&format!("Material:   {} - {}\n", v.material_name, v.rating));
-        let (z_laenge, z_hoehe, z_dicke) =
+        let z =
             crate::geometry::zuschnitt(&g.outline, p, g.scale_thickness_mm, g.total_thickness_mm);
-        let zusatz = if p.style.has_two_scales() {
-            " (zwei Schalen daraus, Angel aus Stahl)"
+        if z.stuecke == 2 {
+            out.push_str(&format!(
+                "Zuschnitt:  Holzleiste {} × {} × {} mm, {} Stück (dazwischen {} mm für die Angel aus Stahl)\n",
+                de(z.laenge_mm, 0),
+                de(z.hoehe_mm, 0),
+                de(z.dicke_mm, 0),
+                z.stuecke,
+                de(b.tang_thickness_mm, 1)
+            ));
         } else {
-            " (mit Schleif- und Hobelzugabe)"
-        };
-        out.push_str(&format!(
-            "Zuschnitt:  Holzleiste {} × {} × {} mm{}\n",
-            de(z_laenge, 0),
-            de(z_hoehe, 0),
-            de(z_dicke, 0),
-            zusatz
-        ));
+            out.push_str(&format!(
+                "Zuschnitt:  Holzblock {} × {} × {} mm (mit Schleif- und Hobelzugabe)\n",
+                de(z.laenge_mm, 0),
+                de(z.hoehe_mm, 0),
+                de(z.dicke_mm, 0)
+            ));
+        }
         out.push_str(&format!(
             "Rohling:    Klinge {} × {} × {} mm, Angel {} × {} × {} mm ({})\n",
             de(b.blade_length_mm, 0),
@@ -113,15 +118,14 @@ impl DesignPlan {
             b.tang_style.label()
         ));
         out.push_str(&format!(
-            "Griff:      {} lang, {} hoch, {} dick, Schalendicke {}\n",
+            "Griff:      {} lang, {} hoch, {} dick\n",
             de_mm(g.handle_length_mm, 0),
             de_mm(g.handle_height_mm, 0),
-            de_mm(g.total_thickness_mm, 1),
-            de_mm(g.scale_thickness_mm, 1)
+            de_mm(g.total_thickness_mm, 1)
         ));
         out.push_str(&format!(
-            "Querschnitt: {} - Rücken {} mm, Bauch {} mm, Längsgrat {} mm, \
-             Verjüngung {} mm\n",
+            "Querschnitt: {} - Rücken {}, Bauch {}, Längsgrat {}, \
+             Verjüngung {}\n",
             p.section.shape.label(),
             de_mm(p.section.spine_round_mm, 1),
             de_mm(p.section.belly_round_mm, 1),
@@ -327,29 +331,49 @@ impl DesignPlan {
                     .to_string(),
             );
         }
+        let z = crate::geometry::zuschnitt(&g.outline, p, g.scale_thickness_mm, g.total_thickness_mm);
         steps.push(format!(
-            "Material auswählen und im Block besorgen - mindestens {} × {} × {}, \
-             inklusive{zugabe} für den Beschnitt.",
-            de_mm(g.handle_length_mm + 10.0, 0),
-            de_mm(g.handle_height_mm + 8.0, 0),
-            de_mm(g.scale_thickness_mm + 2.0, 1),
-            zugabe = if g.scale_thickness_mm > 4.0 { " 2 mm" } else { " 1 mm" }
+            "Material auswählen und im Block besorgen - {}, mindestens {} × {} × {} \
+             (mit Zugabe für den Beschnitt).",
+            if z.stuecke == 2 {
+                format!("{} Stück", z.stuecke)
+            } else {
+                "1 Stück".to_string()
+            },
+            de_mm(z.laenge_mm, 0),
+            de_mm(z.hoehe_mm, 0),
+            de_mm(z.dicke_mm, 0)
         ));
         steps.push("Material konditionieren: mehrere Tage bei Raumtemperatur lagern, \
                     Krümmung prüfen."
             .to_string());
-        steps.push(format!(
-            "Griffschale(n) zuschneiden - Kontur aus dem DXF (Layer SCHALE), \
-             Schalendicke {}.",
-            de_mm(g.scale_thickness_mm, 1)
-        ));
-        if p.style.hat_angelnut() {
+        if z.stuecke == 2 {
             steps.push(format!(
-                "Nut fuer die Angel fräsen: {} tief (Angel + {} Spalt), \
-                 Kontur aus dem DXF (Layer AUSSPA).",
-                de_mm(b.tang_thickness_mm + p.glue_gap_mm, 1),
+                "Griffschalen zuschneiden - Kontur aus dem DXF (Layer SCHALE), \
+                 {} Stück à {}.",
+                z.stuecke,
+                de_mm(g.scale_thickness_mm, 1)
+            ));
+        } else {
+            steps.push(format!(
+                "Holzblock zuschneiden - Kontur aus dem DXF (Layer SCHALE), {} dick.",
+                de_mm(g.total_thickness_mm, 1)
+            ));
+        }
+        if g.tang_nut.is_some() {
+            steps.push(format!(
+                "Nut fuer die Angel fräsen: Kontur aus dem DXF (Layer AUSSPA), \
+                 {} breit - rings {} Luft fuer den Kleber.",
+                de_mm(b.tang_thickness_mm, 1),
                 de_mm(p.glue_gap_mm, 2)
             ));
+            if p.style == HandleStyle::PartialTangBolster {
+                steps.push(format!(
+                    "Die Nut beginnt {} hinter der Vorderkante - davor sitzt die \
+                     Bastion, dort liegt die Angel im Metall.",
+                    de_mm(g.wood_start_x_mm, 0)
+                ));
+            }
         } else {
             steps.push(
                 "Die Angel sitzt in der Fuge zwischen den Schalen - die Schalen \
@@ -427,6 +451,11 @@ impl Weight {
 }
 
 /// Schaetzt das Gewicht des Griffes aus Volumen und Materialdichte.
+///
+/// Das Holz wird aus dem Modell gemessen, nicht aus der Kontur gerechnet:
+/// der Griff verjuengt sich zum Ende hin, die Kanten sind abgerundet und
+/// die Nut fuer die Angel nimmt Holz weg. Nur so weiss der Plan, was der
+/// Griff wirklich wiegt.
 pub fn estimate_weight(
     geo: &HandleGeometry,
     blank: &BladeBlank,
@@ -439,18 +468,28 @@ pub fn estimate_weight(
     // Holz: zwei Schalen bzw. ein Block
     //
     // Bei zwei Schalen liegt die Angel in der Fuge dazwischen - die
-    // Schalen sind massiv. Nur beim Ein-Stueck- und beim Zwingengriff
-    // wird das Holz fuer die Angel aufgeschnitten, dort fehlt es dann.
-    let holz_ohne_tasche = outline_area * geo.scale_thickness_mm;
-    let holz_in_der_tasche = tang_area * blank.tang_thickness_mm;
-    let wood_mm3 = if params.style.has_two_scales() {
-        holz_ohne_tasche * 2.0
-    } else if params.style == crate::model::HandleStyle::PartialTangBolster {
-        // Bei der Bastion liegt die Angel im Metall - das Holz ist massiv.
-        outline_area * geo.total_thickness_mm
+    // Schalen sind massiv. Bei Bastion, Ein-Stueck und Zwinge ist das
+    // Holz ein Block, in dem die Angel in einer Nut liegt.
+    let holz_dicke = if params.style.hat_zwei_schalen() {
+        geo.scale_thickness_mm
     } else {
-        // Ein-Stueck und Zwinge: ein Block mit der Nut fuer die Angel.
-        outline_area * geo.total_thickness_mm - holz_in_der_tasche
+        geo.total_thickness_mm
+    };
+    let stuecke = params.style.holzstuecke();
+    // Das Holz, das fuer die Angel wegfällt: die Nut ist so breit wie
+    // die Angel dick.
+    let nut_volumen = geo
+        .tang_nut
+        .as_ref()
+        .map(|pfad| crate::geometry::polygon_area(pfad) * blank.tang_thickness_mm)
+        .unwrap_or(0.0);
+    let gemessen = crate::geometry::holzvolumen(&geo.bodies);
+    let wood_mm3 = if gemessen > 0.0 {
+        gemessen
+    } else {
+        // Aeltere Projektdateien tragen keine Koerper - dann die Naeherung
+        // aus der Kontur.
+        outline_area * holz_dicke * stuecke as f64 - nut_volumen
     };
     let wood_cm3 = wood_mm3 / 1000.0;
     let wood_g = wood_cm3 * material.density;
@@ -467,13 +506,19 @@ pub fn estimate_weight(
     let steel_g = (steel_mm3 / 1000.0) * 7.85;
 
     // Metall: Bastion oder Zwinge
-    let metal_area = geo
-        .bolster_profile
-        .as_ref()
-        .map(|p| crate::geometry::polygon_area(p))
-        .or_else(|| geo.ferrule_profile.as_ref().map(|p| crate::geometry::polygon_area(p)))
-        .unwrap_or(0.0);
-    let metal_mm3 = metal_area * geo.total_thickness_mm;
+    //
+    // Die Zwinge ist ein Mantel um das Holz - kein voller Klotz. Sonst
+    // waere sie rund dreimal so schwer wie in Wirklichkeit.
+    let metal_mm3 = if let Some(f) = &geo.ferrule_profile {
+        let aussen = crate::mesh::offset(f, -crate::export::stl::WAND_ZWINGE);
+        let innen = crate::mesh::offset(f, -crate::export::stl::PASSUNG_ZWINGE);
+        (crate::geometry::polygon_area(&aussen) - crate::geometry::polygon_area(&innen))
+            * geo.total_thickness_mm
+    } else if let Some(b) = &geo.bolster_profile {
+        crate::geometry::polygon_area(b) * geo.total_thickness_mm
+    } else {
+        0.0
+    };
     let metal_g = (metal_mm3 / 1000.0) * 8.5;
 
     // Waage: schwerer Griff gegen leichte Klinge
@@ -498,6 +543,32 @@ pub fn estimate_weight(
     }
 }
 
+/// Der Zuschnitt als kurzer Text fuer die Dokumente.
+///
+/// Bei zwei Griffschalen sind es zwei Stueck - je eine Schale. Die Angel
+/// kommt dazwischen und braucht ihren Platz; sie ist aus Stahl und zaehlt
+/// nicht zum Holz. Bei allen anderen Bauarten ist es ein Block.
+fn zuschnitt_kurz(b: &BladeBlank, z: &crate::geometry::Zuschnitt) -> String {
+    if z.stuecke == 2 {
+        format!(
+            "{} × {} × {} mm, {} Stück (dazwischen {} mm für die Angel)",
+            de(z.laenge_mm, 0),
+            de(z.hoehe_mm, 0),
+            de(z.dicke_mm, 0),
+            z.stuecke,
+            de(b.tang_thickness_mm, 1)
+        )
+    } else {
+        format!(
+            "Holzblock {} × {} × {} mm",
+            de(z.laenge_mm, 0),
+            de(z.hoehe_mm, 0),
+            de(z.dicke_mm, 0)
+        )
+    }
+}
+
+/// Die Handwaage des Griffs.
 pub fn style_name(style: HandleStyle) -> &'static str {
     style.label()
 }
@@ -537,11 +608,15 @@ pub fn build_bohrplan_pdf(plan: &DesignPlan) -> Pdf {
         30.0,
         8.0,
         &format!(
-            "Angel {} × {} mm, Länge {} mm | Schalendicke {} | Griff {} × {} mm",
+            "Angel {} × {} mm, Länge {} mm | {} | Griff {} × {} mm",
             de(crate::geometry::angel_hoehe_am_heft(b, p), 1),
             de(b.tang_thickness_mm, 1),
             de(b.tang_length_mm, 1),
-            de_mm(g.scale_thickness_mm, 1),
+            if p.style.hat_zwei_schalen() {
+                format!("2 Schalen à {}", de_mm(g.scale_thickness_mm, 1))
+            } else {
+                format!("1 Block, {}", de_mm(g.total_thickness_mm, 1))
+            },
             de(g.handle_length_mm, 0),
             de(g.handle_height_mm, 0)
         ),
@@ -768,14 +843,15 @@ pub fn build_bohrplan_pdf(plan: &DesignPlan) -> Pdf {
 
     ty += 4.0;
     pdf.set_fill(0.0, 0.0, 0.0);
-    if p.style.hat_angelnut() {
+    if g.tang_nut.is_some() {
         pdf.text(
             15.0,
             ty,
             8.0,
             &format!(
-                "Nut fuer die Angel: {} tief (Angel + Spalt) | Kantenabrundung {}",
-                de_mm(b.tang_thickness_mm + p.glue_gap_mm, 1),
+                "Nut fuer die Angel: {} breit (Angel dick), Spalt {} | Kantenabrundung {}",
+                de_mm(b.tang_thickness_mm, 1),
+                de_mm(p.glue_gap_mm, 2),
                 de_mm(p.edge_break_mm, 1)
             ),
             false,
@@ -823,12 +899,20 @@ pub fn build_bauplan_pdf_mit(
     pdf.text(15.0, 24.0, 18.0, "Bauplan Griff", true);
     pdf.text(15.0, 34.0, 10.0, &format!("{} - {}", style_name(p.style), v.material_name), false);
 
-    let (z_laenge, z_hoehe, z_dicke) =
-        crate::geometry::zuschnitt(&g.outline, p, g.scale_thickness_mm, g.total_thickness_mm);
+    let z = crate::geometry::zuschnitt(&g.outline, p, g.scale_thickness_mm, g.total_thickness_mm);
 
     let mut y = 52.0;
     pdf.text(15.0, y, 12.0, "Rohling und Maße", true);
     y += 12.0;
+    let holz_row = if z.stuecke == 2 {
+        format!(
+            "{} Schalen à {} mm",
+            z.stuecke,
+            de_mm(g.scale_thickness_mm, 1)
+        )
+    } else {
+        format!("{} Block, {} mm", z.stuecke, de_mm(g.total_thickness_mm, 1))
+    };
     let rows = vec![
         ("Klingenlänge", de_mm(b.blade_length_mm, 1)),
         ("Klingenbreite am Heft", de_mm(b.blade_width_mm, 1)),
@@ -842,16 +926,8 @@ pub fn build_bauplan_pdf_mit(
         ("Grifflänge", de_mm(g.handle_length_mm, 1)),
         ("Griffhöhe", de_mm(g.handle_height_mm, 1)),
         ("Gesamtdicke", de_mm(g.total_thickness_mm, 1)),
-        ("Schalendicke", de_mm(g.scale_thickness_mm, 1)),
-        (
-            "Zuschnitt Holz",
-            format!(
-                "{} × {} × {} mm",
-                de(z_laenge, 0),
-                de(z_hoehe, 0),
-                de(z_dicke, 0)
-            ),
-        ),
+        ("Holz", holz_row),
+        ("Zuschnitt Holz", zuschnitt_kurz(b, &z)),
     ];
     for (k, val) in rows {
         pdf.set_fill(0.1, 0.1, 0.1);
@@ -1035,8 +1111,10 @@ pub fn build_schablone_pdf(plan: &DesignPlan) -> Pdf {
     let y_max = g.outline.iter().map(|q| q.1).fold(f64::MIN, f64::max);
 
     // Die zweite Schale liegt spiegelbildlich unter der ersten, mit
-    // 12 mm Abstand zum Beschnitt - so wie im DXF.
-    let zwei_schalen = p.style.has_two_scales();
+    // 12 mm Abstand zum Beschnitt - so wie im DXF. Bei Bastion,
+    // Ein-Stueck und Zwinge ist das Holz ein Block - der wird nur
+    // einmal gezeichnet.
+    let zwei_schalen = p.style.hat_zwei_schalen();
     let spiegel_dy = if zwei_schalen { 2.0 * y_min - 12.0 } else { 0.0 };
 
     // Der Massstab ist 1:1 - ein Millimeter auf dem Papier ist ein
@@ -1072,18 +1150,15 @@ pub fn build_schablone_pdf(plan: &DesignPlan) -> Pdf {
         "In 100 % drucken. Die 100-mm-Linie muss nach dem Ausdruck genau 100 mm lang sein.",
         false,
     );
-    let (z_laenge, z_hoehe, z_dicke) =
-        crate::geometry::zuschnitt(&g.outline, p, g.scale_thickness_mm, g.total_thickness_mm);
+    let z = crate::geometry::zuschnitt(&g.outline, p, g.scale_thickness_mm, g.total_thickness_mm);
     pdf.set_fill(0.1, 0.1, 0.1);
     pdf.text(
         15.0,
         35.0,
         8.5,
         &format!(
-            "Zuschnitt: Holzleiste {} × {} × {} mm",
-            de(z_laenge, 0),
-            de(z_hoehe, 0),
-            de(z_dicke, 0)
+            "Zuschnitt: {}",
+            zuschnitt_kurz(b, &z)
         ),
         false,
     );
@@ -1106,9 +1181,9 @@ pub fn build_schablone_pdf(plan: &DesignPlan) -> Pdf {
         pdf.set_line_width(0.35);
         pdf.set_dash(&[3.0, 2.0]);
         pdf.polyline(&punkte(&g.tang_profile), true);
-        if p.style.hat_angelnut() {
+        if let Some(nut) = &g.tang_nut {
             // Nur dort wird fuer die Angel eine Bahn gefraest.
-            pdf.polyline(&punkte(&g.recess), true);
+            pdf.polyline(&punkte(nut), true);
         }
         if let Some(bo) = &g.bolster_profile {
             pdf.polyline(&punkte(bo), true);
@@ -1186,17 +1261,128 @@ pub fn build_schablone_pdf(plan: &DesignPlan) -> Pdf {
     pdf.set_fill(0.0, 0.0, 0.0);
     pdf.text(15.0, y, 11.0, "Hinweise", true);
     y += 9.0;
-    let hinweise = [
+    let mut hinweise = vec![
         "Die Schablone an der Vorderkante des Rohlings ausrichten und festkleben.",
         "Vor dem Bohren die 100-mm-Linie prüfen, dann stimmen alle Maße.",
         "Die grün gestrichelte Angel liegt mittig im Holz - die Bohrungen gehen durch die Angel.",
-        "Bei zwei Schalen: beide Konturen sind spiegelbildlich, es sind zwei gleiche Schalen.",
     ];
+    if p.style.hat_zwei_schalen() {
+        hinweise.push("Bei zwei Schalen: beide Konturen sind spiegelbildlich, es sind zwei gleiche Schalen.");
+    }
     for h in hinweise {
         y = pdf.text_block(15.0, y, 8.0, 180.0, &format!("- {h}"), false, 5.0);
     }
 
     pdf
+}
+
+#[cfg(test)]
+mod gewicht_tests {
+    use super::*;
+    use crate::model::{BladeBlank, HandleParams, HandleStyle};
+
+    /// Das Volumen eines Netzes (Divergenzsatz).
+    fn netz_volumen(m: &crate::mesh::Mesh) -> f64 {
+        let mut v = 0.0;
+        for &(a, b, c) in &m.faces {
+            let p = m.vertices[a];
+            let q = m.vertices[b];
+            let r = m.vertices[c];
+            v += (p.0 * (q.1 * r.2 - q.2 * r.1)
+                - p.1 * (q.0 * r.2 - q.2 * r.0)
+                + p.2 * (q.0 * r.1 - q.1 * r.0))
+                / 6.0;
+        }
+        v.abs()
+    }
+
+    /// Das Holzvolumen aus dem Modell selbst.
+    fn holzvolumen(geo: &crate::model::HandleGeometry) -> f64 {
+        geo.bodies
+            .iter()
+            .map(|body| netz_volumen(&crate::mesh::loft(body)))
+            .sum()
+    }
+
+    #[test]
+    fn das_holzgewicht_entspricht_dem_modell() {
+        // Die Schaetzung im Plan muss zum Volumen des 3D-Modells passen.
+        // Sonst wiegt der Griff anders, als er gebaut wird.
+        for style in HandleStyle::all() {
+            let b = BladeBlank::default();
+            let mut p = HandleParams::default();
+            p.style = style;
+            let mat = crate::materials::get("walnuss").expect("Material fehlt");
+            let geo = crate::geometry::build_geometry(&b, &p);
+            let w = estimate_weight(&geo, &b, &p, mat);
+            let erwartet = holzvolumen(&geo) / 1000.0 * mat.density;
+            assert!(
+                (w.wood_g - erwartet).abs() < erwartet * 0.01,
+                "Bauart {style:?}: Gewicht {:.1} g, Modell {:.1} g",
+                w.wood_g,
+                erwartet
+            );
+        }
+    }
+
+    #[test]
+    fn die_bastion_ist_kein_zwei_schalen_griff() {
+        // Das Holz der Bastion ist ein Block in voller Dicke. Vorher wurde
+        // es wie zwei Schalen gerechnet - der Griff waere rund ein Drittel
+        // zu leicht gewogen worden.
+        let b = BladeBlank::default();
+        let mat = crate::materials::get("walnuss").expect("Material fehlt");
+
+        let mut p = HandleParams::default();
+        p.style = HandleStyle::PartialTangBolster;
+        let geo = crate::geometry::build_geometry(&b, &p);
+        let bastion = estimate_weight(&geo, &b, &p, mat);
+
+        let mut p = HandleParams::default();
+        p.style = HandleStyle::FullTangTwoScale;
+        let geo2 = crate::geometry::build_geometry(&b, &p);
+        let schalen = estimate_weight(&geo2, &b, &p, mat);
+
+        // Der Block wiegt deutlich mehr als eine einzige Schale - er ist
+        // ja in voller Griffdicke da.
+        let eine_schale = schalen.wood_g / 2.0;
+        assert!(
+            bastion.wood_g > eine_schale * 1.8,
+            "Bastion {:.1} g, eine Schale {:.1} g",
+            bastion.wood_g,
+            eine_schale
+        );
+        // Und das Holz ist ein einziger Block, nicht drei getrennte
+        // Schichten - so ist es auch im 3D-Modell.
+        assert_eq!(
+            geo.bodies.len(),
+            1,
+            "Die Bastion muss aus einem Block bestehen"
+        );
+    }
+
+    #[test]
+    fn die_zwinge_ist_ein_mantel_kein_klotz() {
+        // Die Zwinge umfasst das Holz mit einer duennen Wand. Als voller
+        // Klotz gerechnet waere sie rund dreimal so schwer.
+        let b = BladeBlank::default();
+        let mut p = HandleParams::default();
+        p.style = HandleStyle::Ferrule;
+        let mat = crate::materials::get("walnuss").expect("Material fehlt");
+        let geo = crate::geometry::build_geometry(&b, &p);
+        let w = estimate_weight(&geo, &b, &p, mat);
+        let voller_klotz =
+            crate::geometry::polygon_area(geo.ferrule_profile.as_ref().unwrap())
+                * geo.total_thickness_mm
+                / 1000.0
+                * 8.5;
+        assert!(
+            w.metal_g < voller_klotz * 0.5,
+            "Zwinge {:.1} g, als Klotz {:.1} g",
+            w.metal_g,
+            voller_klotz
+        );
+    }
 }
 
 #[cfg(test)]

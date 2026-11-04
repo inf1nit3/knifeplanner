@@ -58,20 +58,42 @@ impl HandleStyle {
             HandleStyle::Ferrule,
         ]
     }
-    /// Braucht diese Bauart zwei Griffschalen (statt einer Halbschale)?
-    pub fn has_two_scales(&self) -> bool {
-        matches!(self, HandleStyle::FullTangTwoScale | HandleStyle::PartialTangBolster)
+
+    /// Wie viele Holzstuecke muss der Schreiner schneiden?
+    ///
+    /// Nur beim Full Tang mit zwei Schalen ist das Holz zweiteilig: zwei
+    /// gespiegelte Schalen, die Angel sitzt in der Fuge dazwischen. Die
+    /// Bastion, der Ein-Stueck- und der Zwingengriff bestehen aus einem
+    /// einzigen massiven Block - dort ist die Angel entweder im Metall
+    /// oder in einer Nut im Block.
+    pub fn holzstuecke(&self) -> usize {
+        match self {
+            HandleStyle::FullTangTwoScale => 2,
+            _ => 1,
+        }
     }
 
-    /// Wird das Holz fuer die Angel aufgeschnitten?
+    /// Braucht diese Bauart zwei gespiegelte Griffschalen?
     ///
-    /// Nur dort, wo die Angel wirklich im Holz steckt: beim Ein-Stueck-
-    /// Griff (eine Nut in der Vorderkante) und beim Zwingengriff (ein
-    /// Schlitz im Block). Bei zwei Schalen sitzt die Angel in der Fuge
-    /// dazwischen - die Schalen liegen flach an ihr, da wird nichts
-    /// ausgefräst. Bei der Bastion liegt die Angel im Metall.
-    pub fn hat_angelnut(&self) -> bool {
-        matches!(self, HandleStyle::OnePiece | HandleStyle::Ferrule)
+    /// Das ist nur beim Full Tang mit zwei Schalen der Fall. Die Bastion
+    /// hat zwar eine Bastion und ein Holzstueck dahinter, aber das Holz
+    /// ist ein Block - es wird nicht gespiegelt geschnitten.
+    pub fn hat_zwei_schalen(&self) -> bool {
+        self.holzstuecke() == 2
+    }
+
+    /// Steht die Angel mitten im Holz, so dass links und rechts Holz bleibt?
+    ///
+    /// Bei zwei Schalen sitzt sie in der Fuge, bei Bastion und Zwinge in
+    /// einer Nut im Block. Beim Ein-Stueck-Griff wird die Angel aus der
+    /// Vorderkante herausgeraust - dort ist der ganze Block eine Seite.
+    pub fn angel_im_holz(&self) -> bool {
+        matches!(
+            self,
+            HandleStyle::FullTangTwoScale
+                | HandleStyle::PartialTangBolster
+                | HandleStyle::Ferrule
+        )
     }
 }
 
@@ -456,6 +478,13 @@ pub struct HandleGeometry {
     pub outline: Vec<(f64, f64)>,
     pub tang_profile: Vec<(f64, f64)>,
     pub recess: Vec<(f64, f64)>,
+    /// Die Bahn, die fuer die Angel ins Holz gefraest wird.
+    ///
+    /// `None` heisst: es wird nichts gefraest - bei zwei Griffschalen
+    /// sitzt die Angel in der Fuge dazwischen. Aeltere Projektdateien haben
+    /// kein Feld - da wird nichts gefraest.
+    #[serde(default)]
+    pub tang_nut: Option<Vec<(f64, f64)>>,
     pub pins: Vec<PinSpec>,
 
     pub scale_thickness_mm: f64,

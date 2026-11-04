@@ -87,10 +87,14 @@ pub fn build_svg(
         "<path class=\"tang\" d=\"{}\"/>\n",
         path_data(&geo.tang_profile, true)
     ));
-    s.push_str(&format!(
-        "<path class=\"rec\" d=\"{}\"/>\n",
-        path_data(&geo.recess, true)
-    ));
+    // Die Frassbahn gibt es nur dort, wo wirklich Holz wegfällt - bei
+    // zwei Schalen sitzt die Angel in der Fuge dazwischen.
+    if let Some(nut) = &geo.tang_nut {
+        s.push_str(&format!(
+            "<path class=\"rec\" d=\"{}\"/>\n",
+            path_data(nut, true)
+        ));
+    }
 
     // Bohrlöcher
     for pin in &geo.pins {
@@ -135,11 +139,15 @@ pub fn build_svg(
             material.material_name, material.rating
         ),
         format!(
-            "Angel: {:.1} x {:.1} mm, Laenge {:.1} mm | Schalendicke {:.1} mm | Gesamt {:.1} mm",
+            "Angel: {:.1} x {:.1} mm, Laenge {:.1} mm | {} | Gesamt {:.1} mm",
             crate::geometry::angel_hoehe_am_heft(blank, params),
             blank.tang_thickness_mm,
             blank.tang_length_mm,
-            geo.scale_thickness_mm,
+            if params.style.hat_zwei_schalen() {
+                format!("2 Schalen a {:.1} mm", geo.scale_thickness_mm)
+            } else {
+                format!("1 Block, {:.1} mm", geo.total_thickness_mm)
+            },
             geo.total_thickness_mm
         ),
         format!(

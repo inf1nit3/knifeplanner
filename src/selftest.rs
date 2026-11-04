@@ -347,6 +347,16 @@ pub fn run(target_dir: &Path) -> (Report, String) {
             export_detail = format!("{}: Bauplan-PDF fehlerhaft", style_label(style));
             break;
         }
+        // Die Druckschablone im Massstab 1:1 - sie ist das Blatt, auf dem
+        // gebohrt wird. Da muss die Kontur des Holzes stehen.
+        let schablone = dir.join("schablone-1zu1.pdf");
+        if crate::plan::build_schablone_pdf(&plan).save(&schablone).is_err()
+            || !pdf_ok(&std::fs::read(&schablone).unwrap_or_default())
+        {
+            export_ok = false;
+            export_detail = format!("{}: Schablonen-PDF fehlerhaft", style_label(style));
+            break;
+        }
 
         // Vorschau-PNG
         let png = dir.join("vorschau.png");
@@ -362,7 +372,7 @@ pub fn run(target_dir: &Path) -> (Report, String) {
         "Alle Bauarten exportieren fehlerfrei",
         export_ok,
         if export_ok {
-            "DXF, STL, OBJ, SVG, 2 PDFs, PNG fuer 4 Bauarten".into()
+            "DXF, STL, OBJ, SVG, 3 PDFs, PNG fuer 4 Bauarten".into()
         } else {
             export_detail
         },
