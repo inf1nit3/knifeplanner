@@ -714,6 +714,37 @@ pub fn bolster_profile(b: &BladeBlank, p: &HandleParams) -> Vec<Point> {
     ]
 }
 
+/// Die Kontur des Angelstegs in der y-z-Ebene.
+///
+/// Der Steg steht quer zur Klinge: ein duennes Blech, das die Schneide vom
+/// Griff fernhaelt. Seitlich ragen zwei Fluegel ueber den Griff, unten
+/// ragt ein Stueck unter die Schneide. In der Mitte bleibt der Schlitz,
+/// durch den die Klinge geht.
+///
+/// Die Koordinaten sind (y, z) - der Steg steht senkrecht zur Klinge.
+pub fn guard_profile(b: &BladeBlank, p: &HandleParams) -> Vec<Point> {
+    let (_, total_t) = schalendicken(b, p);
+    let aussen = total_t / 2.0 + b.guard_wing_mm.max(0.0);
+    let slot = b.tang_thickness_mm / 2.0;
+    let oben = b.spine_offset_mm;
+    let schneide = -b.edge_offset_mm.abs();
+    let unten = schneide - b.guard_drop_mm.max(0.0);
+    // Linker Fluegel, dann das Stueck unter der Schneide, dann der rechte
+    // Fluegel. Der Schlitz in der Mitte bleibt offen.
+    //
+    // Die Koordinaten sind (y, z): erst die Hoehe, dann die Breite.
+    vec![
+        (unten, -aussen),
+        (oben, -aussen),
+        (oben, -slot),
+        (schneide, -slot),
+        (schneide, slot),
+        (oben, slot),
+        (oben, aussen),
+        (unten, aussen),
+    ]
+}
+
 pub fn ferrule_profile(b: &BladeBlank, p: &HandleParams) -> Vec<Point> {
     // Die Zwinge ist ein Mantel ueber dem vorderen Griffende. Ihre
     // Kontur folgt dem Griffprofil, damit sie bündig anliegt.
@@ -964,6 +995,12 @@ pub fn build_geometry(b: &BladeBlank, p: &HandleParams) -> HandleGeometry {
         HandleStyle::PartialTangBolster => Some(bolster_profile(b, p)),
         _ => None,
     };
+    // Der Angelsteg sitzt vor dem Griff, wenn der Rohling einen hat.
+    let guard_profile = if b.has_guard {
+        Some(guard_profile(b, p))
+    } else {
+        None
+    };
     let ferrule = match p.style {
         HandleStyle::Ferrule => Some(ferrule_profile(b, p)),
         _ => None,
@@ -1011,6 +1048,19 @@ pub fn build_geometry(b: &BladeBlank, p: &HandleParams) -> HandleGeometry {
             "Der Griff ist mit {} länger als bei den meisten Messern. \
              Ganzschalengriff an den Händen abgleichen.",
             de_mm(grip_len, 0)
+        ));
+    }
+
+    // Der Angelsteg steht vor dem Griff - er gehoert zum Rohling, nicht
+    // zum Griff, wird aber mit geplant.
+    if b.has_guard {
+        notes.push(format!(
+            "Angelsteg: er steht quer vor dem Griff und hält die Schneide vom Griff fern. \
+             Dicke {} mm, die Flügel ragen je {} mm über den Griff, unten ragt er {} mm \
+             unter die Schneide. Der Schlitz in der Mitte muss zur Angel passen.",
+            crate::text::de(b.guard_thickness_mm, 1),
+            crate::text::de(b.guard_wing_mm, 1),
+            crate::text::de(b.guard_drop_mm, 1),
         ));
     }
 
@@ -1083,6 +1133,7 @@ pub fn build_geometry(b: &BladeBlank, p: &HandleParams) -> HandleGeometry {
         wood_end_x_mm: wood_end,
         bolster_profile: bolster,
         ferrule_profile: ferrule,
+        guard_profile,
         bodies,
         metrics,
         warnings,
@@ -2089,6 +2140,39 @@ mod ring_tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn der_angelsteg_steht_vor_dem_griff() {
+        // Der Angelsteg steht quer vor dem Griff: er haelt die Schneide
+        // fern und die Angel geht durch seinen Schlitz.
+        let mut b = BladeBlank::default();
+        b.has_guard = true;
+        let p = HandleParams::default();
+        let g = build_geometry(&b, &p);
+        let guard = g.guard_profile.expect("kein Angelsteg");
+        let mut oben = f64::MIN;
+        let mut unten = f64::MAX;
+        let mut aussen = 0.0f64;
+        for &(y, z) in &guard {
+            oben = oben.max(y);
+            unten = unten.min(y);
+            aussen = aussen.max(z.abs());
+        }
+        assert!(
+            unten < -b.edge_offset_mm.abs(),
+            "der Steg reicht nicht unter die Schneide: {unten}"
+        );
+        assert!(oben >= b.spine_offset_mm, "der Steg deckt die Angel nicht ab");
+        assert!(
+            aussen > g.total_thickness_mm / 2.0,
+            "die Fluegel ragen nicht ueber den Griff: {aussen}"
+        );
+
+        // Ohne den Schalter gibt es keinen Steg.
+        let b2 = BladeBlank::default();
+        let g2 = build_geometry(&b2, &p);
+        assert!(g2.guard_profile.is_none());
     }
 
     #[test]

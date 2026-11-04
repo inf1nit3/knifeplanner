@@ -199,7 +199,9 @@ fn main() -> anyhow::Result<()> {
             Some("flach") => knifeplanner::model::SectionShape::Flat,
             _ => knifeplanner::model::SectionShape::Oval,
         };
-        let blank = BladeBlank::default();
+        let mut blank = BladeBlank::default();
+        // Der Angelsteg laesst sich zuschalten: --render3d <png> ... guard
+        blank.has_guard = args.iter().any(|a| a == "guard");
         let mut params = HandleParams::default();
         params.style = style;
         params.section.shape = shape;

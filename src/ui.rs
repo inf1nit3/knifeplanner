@@ -635,9 +635,30 @@ impl App {
                         .checkbox(&mut self.blank.has_bolster, "Bastion am Rohling")
                         .changed();
                     changed |= ui
-                        .checkbox(&mut self.blank.has_guard, "Paradeschärke")
+                        .checkbox(&mut self.blank.has_guard, "Angelsteg")
                         .changed();
                 });
+
+                if self.blank.has_guard {
+                    changed |= drag_row(
+                        ui,
+                        "Steg-Dicke",
+                        &mut self.blank.guard_thickness_mm,
+                        1.0..=8.0,
+                    );
+                    changed |= drag_row(
+                        ui,
+                        "Flügel über Griff",
+                        &mut self.blank.guard_wing_mm,
+                        0.0..=15.0,
+                    );
+                    changed |= drag_row(
+                        ui,
+                        "Steg unter Schneide",
+                        &mut self.blank.guard_drop_mm,
+                        0.0..=30.0,
+                    );
+                }
 
                 ui.separator();
                 changed |= drag_row(ui, "Rückenabstand", &mut self.blank.spine_offset_mm, 2.0..=25.0);

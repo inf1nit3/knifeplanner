@@ -303,6 +303,16 @@ impl DesignPlan {
                 de_mm(p.heel_grind_mm, 1)
             ));
         }
+        if b.has_guard {
+            steps.push(format!(
+                "Angelsteg herstellen: {} mm dick, die Flügel je {} mm über den Griff, \
+                 unten {} mm unter die Schneide. Der Schlitz in der Mitte nimmt die \
+                 Angel auf - der Steg wird dort festgeklemmt.",
+                de_mm(b.guard_thickness_mm, 1),
+                de_mm(b.guard_wing_mm, 1),
+                de_mm(b.guard_drop_mm, 1)
+            ));
+        }
         if p.style == HandleStyle::PartialTangBolster {
             steps.push(
                 "Bastion anpassen und mit der Angel verschweißen - Schweißnaht planieren, \
@@ -445,8 +455,15 @@ pub fn estimate_weight(
     let wood_cm3 = wood_mm3 / 1000.0;
     let wood_g = wood_cm3 * material.density;
 
-    // Stahl: die Angel im Griff
+    // Stahl: die Angel im Griff und der Angelsteg davor
     let steel_mm3 = tang_area * blank.tang_thickness_mm;
+    let steel_mm3 = steel_mm3
+        + geo.guard_profile
+            .as_ref()
+            .map(|prof| {
+                crate::geometry::polygon_area(prof) * blank.guard_thickness_mm.max(0.5)
+            })
+            .unwrap_or(0.0);
     let steel_g = (steel_mm3 / 1000.0) * 7.85;
 
     // Metall: Bastion oder Zwinge

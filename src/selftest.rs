@@ -607,6 +607,31 @@ pub fn run(target_dir: &Path) -> (Report, String) {
                     }
                 }
             }
+
+            // Der Angelsteg ist ein eigener Koerper und muss im Modell
+            // auftauchen - sonst fehlt er im STEP.
+            {
+                let mut blank = BladeBlank::default();
+                blank.has_guard = true;
+                let params = HandleParams::default();
+                let plan = DesignPlan::build(&blank, &params, "walnuss");
+                let ziel = target_dir.join("freecad_guard");
+                match crate::freecad::baue(&plan, &blank, &params, &cmd, &ziel) {
+                    Ok(ergebnis) => {
+                        let da = ergebnis.teile.iter().any(|(n, _)| n.contains("Angelsteg"));
+                        r.check(
+                            "FreeCAD baut den Angelsteg",
+                            da,
+                            if da {
+                                format!("Angelsteg mit {:.0} mm3", ergebnis.volumen_mm3)
+                            } else {
+                                "der Angelsteg fehlt im Modell".to_string()
+                            },
+                        );
+                    }
+                    Err(e) => r.check("FreeCAD baut den Angelsteg", false, truncate(&e, 120)),
+                }
+            }
         }
         None => {
             r.check(

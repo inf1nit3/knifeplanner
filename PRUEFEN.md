@@ -306,7 +306,23 @@ suchen*.
   DXF und die Druckschablone weisen das auch so aus — im DXF ist der Layer
   *AUSSPA* bei dieser Bauart leer.
 
-### 5.1 Angel und Klinge: die durchgehende Angel (ab 0.3.0)
+### 5.1 Angelsteg (ab 0.8.0)
+
+Der Rohling kann einen **Angelsteg** haben (Handschutz). Bis 0.7.x gab es
+dazu nur einen Schalter in der Oberfläche — im Modell war nichts zu sehen.
+Seit 0.8.0 steht der Steg quer vor dem Griff:
+
+- Dicke, Flügelüberhang und der Teil unter der Schneide sind einstellbar.
+- Die Kontur liegt in der y-z-Ebene, weil der Steg quer zur Klinge steht —
+  dafür gibt es im Netz und im Makro ein eigenes Prisma.
+- Die Angel geht durch den Schlitz in der Mitte; der Steg wird dort
+  festgeklemmt.
+
+**Prüfen:** *2 – Rohling* → *Angelsteg* anhaken. In der 3D-Ansicht steht
+ein Stahlsteg vor dem Griff, im Bauplan steht der Herstellungsschritt, und
+der Selbsttest prüft, dass FreeCAD den Steg als eigenen Körper erzeugt.
+
+### 5.2 Angel und Klinge: die durchgehende Angel (ab 0.3.0)
 
 Bis 0.2.x war die Angel im Modell **6,5 mm hoch**, die Klinge am Heft aber
 **26,0 mm**. Die Angel setzte die Klingenkontur also nicht fort: der Stahl

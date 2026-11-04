@@ -153,7 +153,17 @@ pub struct BladeBlank {
     pub edge_offset_mm: f64,
 
     pub has_bolster: bool,
+    /// Angelsteg (Handschutz) vor dem Griff.
     pub has_guard: bool,
+    /// Die Dicke des Angelstegs in mm.
+    #[serde(default = "standard_guard_thickness")]
+    pub guard_thickness_mm: f64,
+    /// Wie weit die Flügel des Angelstegs über den Griff ragen (je Seite).
+    #[serde(default = "standard_guard_wing")]
+    pub guard_wing_mm: f64,
+    /// Wie weit der Angelsteg unter die Schneide reicht.
+    #[serde(default = "standard_guard_drop")]
+    pub guard_drop_mm: f64,
     pub ricasso_mm: f64,
     pub notes: String,
 }
@@ -183,6 +193,9 @@ impl Default for BladeBlank {
             edge_offset_mm: 13.0,
             has_bolster: false,
             has_guard: false,
+            guard_thickness_mm: standard_guard_thickness(),
+            guard_wing_mm: standard_guard_wing(),
+            guard_drop_mm: standard_guard_drop(),
             ricasso_mm: 0.0,
             notes: String::new(),
         }
@@ -316,6 +329,21 @@ pub fn standard_heel_grind() -> f64 {
     12.0
 }
 
+/// Standarddicke des Angelstegs.
+pub fn standard_guard_thickness() -> f64 {
+    3.0
+}
+
+/// Standardueberhang der Flügel des Angelstegs.
+pub fn standard_guard_wing() -> f64 {
+    3.0
+}
+
+/// Standardtiefe des Angelstegs unter der Schneide.
+pub fn standard_guard_drop() -> f64 {
+    6.0
+}
+
 /// Gestaltungsparameter des Griffs.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct HandleParams {
@@ -439,6 +467,9 @@ pub struct HandleGeometry {
     pub wood_end_x_mm: f64,
     pub bolster_profile: Option<Vec<(f64, f64)>>,
     pub ferrule_profile: Option<Vec<(f64, f64)>>,
+    /// Der Angelsteg: seine Kontur liegt in der y-z-Ebene, weil er quer
+    /// zur Klinge steht. Die Koordinaten sind (y, z).
+    pub guard_profile: Option<Vec<(f64, f64)>>,
 
     /// Die Ringe der Griffkoerper (Loft) fuer den 3D-Export.
     pub bodies: Vec<Vec<Vec<(f64, f64, f64)>>>,

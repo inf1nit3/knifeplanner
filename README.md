@@ -352,6 +352,10 @@ Skizze, sondern die Konstruktion:
 - **Die Angel** sitzt bündig zwischen den Schalen, der Spalt ist sichtbar.
 - **Bastion oder Zwinge** als eigener Metallkörper. Das Holz lässt die
   Angel dort aus — sie steckt in einer Nut, nicht im Holz.
+- **Der Angelsteg** (wenn der Rohling einen hat) steht quer vor dem Griff
+  und hält die Schneide fern. Zwei Flügel ragen über den Griff, unten ragt
+  der Steg unter die Schneide; in der Mitte ist der Schlitz, durch den die
+  Klinge geht.
 - **Die Aussparung** für die Angel liegt als Fräsbahn bei.
 - **Beim Ein-Stück-Griff** ist die Nut für die Angel in den Boden gefräst und
   die Angel liegt sichtbar darin. Die Nut ist **so tief wie die Angel dick**

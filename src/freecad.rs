@@ -119,6 +119,9 @@ pub struct Daten {
     pub bastion: Option<Vec<(f64, f64)>>,
     /// Die Zwinge als Mantel: aussen und innen.
     pub zwinge: Option<(Vec<(f64, f64)>, Vec<(f64, f64)>)>,
+    /// Der Angelsteg: seine Kontur in der y-z-Ebene und der Bereich in x,
+    /// in dem er steht.
+    pub guard: Option<(Vec<(f64, f64)>, f64, f64)>,
     /// Die Ringe der Bastion (Mantel mit gebrochenen Kanten).
     pub bastion_ringe: Vec<Vec<(f64, f64, f64)>>,
     /// Die Vorsteckbolzen: Radius, x, y.
@@ -243,6 +246,10 @@ pub fn sammle_daten(plan: &DesignPlan, blank: &BladeBlank, params: &HandleParams
         keile,
         angel: g.tang_profile.clone(),
         bastion: g.bolster_profile.clone(),
+        guard: g.guard_profile.as_ref().map(|prof| {
+            let dicke = blank.guard_thickness_mm.max(0.5);
+            (prof.clone(), -dicke, 0.0)
+        }),
         zwinge: g.ferrule_profile.clone().map(|f| {
             // Die Zwinge ist ein Mantel um das Holz: aussen etwas groesser,
             // innen mit kleiner Passung
@@ -308,6 +315,12 @@ pub fn schreibe_daten(daten: &Daten) -> String {
             for &(x, y, z) in ring {
                 s.push_str(&format!("{:.4} {:.4} {:.4}\n", x, y, z));
             }
+        }
+    }
+    if let Some((profil, x0, x1)) = &daten.guard {
+        s.push_str(&format!("GUARDE {x0:.4} {x1:.4}\n"));
+        for &(y, z) in profil {
+            s.push_str(&format!("{y:.4} {z:.4}\n"));
         }
     }
     if let Some((aussen, innen)) = &daten.zwinge {
@@ -397,7 +410,11 @@ pub fn makro(
     out.push_str("            if kopf == 'SCHNITT':\n");
     out.push_str("                bloecke[name].append([])\n");
     out.push_str("                continue\n");
-    out.push_str("            if kopf in ('ANGEL', 'BASTION', 'ZWINGEAUSSEN', 'ZWINGEINNEN'):\n");
+    out.push_str("            if kopf == 'GUARDE':
+                name = ('GUARDE', float(teile[1]), float(teile[2]))
+                bloecke.setdefault(name, [])
+                continue
+            if kopf in ('ANGEL', 'BASTION', 'ZWINGEAUSSEN', 'ZWINGEINNEN'):\n");
     out.push_str("                name = (kopf,)\n");
     out.push_str("                bloecke.setdefault(name, [])\n");
     out.push_str("                continue\n");
@@ -425,6 +442,13 @@ pub fn makro(
     out.push_str("    f = Part.Face(draht([(x, y, 0.0) for (x, y) in punkte]))\n");
     out.push_str("    k = f.extrude(App.Vector(0, 0, oben - unten))\n");
     out.push_str("    return k.translated(App.Vector(0, 0, unten))\n");
+    out.push_str("\n");
+    out.push_str("def steg_prisma(profil, x0, x1):\n");
+    out.push_str("    # Ein Profil in der yz-Ebene, quer zur Klinge gezogen\n");
+    out.push_str("    v = [App.Vector(0.0, y, z) for (y, z) in profil]\n");
+    out.push_str("    d = Part.makePolygon(v + [v[0]])\n");
+    out.push_str("    f = Part.Face(d)\n");
+    out.push_str("    return f.extrude(App.Vector(x1 - x0, 0, 0)).translated(App.Vector(x0, 0, 0))\n");
     out.push_str("\n");
     out.push_str("def keil(profil, y0, y1):\n");
     out.push_str("    # Ein Profil in der xz-Ebene, quer zur Grifflaenge gezogen\n");
@@ -503,6 +527,15 @@ pub fn makro(
     out.push_str("    teile.append(angel)\n");
     out.push_str("    namen.append('Angel')\n");
     out.push_str("angel_index = len(teile) - 1\n");
+
+    // --- Angelsteg ---
+    if daten.guard.is_some() {
+        out.push_str("\n# --- Angelsteg ---\n");
+        out.push_str("schluessel = [k for k in daten if k[0] == 'GUARDE'][0]\n");
+        out.push_str("angelsteg = steg_prisma(daten[schluessel], schluessel[1], schluessel[2])\n");
+        out.push_str("teile.append(angelsteg)\n");
+        out.push_str("namen.append('Angelsteg')\n");
+    }
 
     // --- Bastion und Zwinge ---
     if !daten.bastion_ringe.is_empty() {

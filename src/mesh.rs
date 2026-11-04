@@ -238,6 +238,39 @@ pub fn prism(poly: &[Point], z0: f64, z1: f64) -> Mesh {
     Mesh { vertices, faces }
 }
 
+/// Erzeugt ein Prisma aus einem Profil in der y-z-Ebene, gezogen in x.
+///
+/// Der Angelsteg steht quer zur Klinge: seine Kontur liegt deshalb in der
+/// y-z-Ebene und nicht in der x-y-Ebene wie der Griff. Die Koordinaten
+/// des Profils sind (y, z).
+pub fn prism_yz(profil: &[Point], x0: f64, x1: f64) -> Mesh {
+    let mut pts = profil.to_vec();
+    if pts.len() < 3 {
+        return Mesh::default();
+    }
+    // Die Kontur wird auf gegen den Uhrzeigersinn gebracht, damit die
+    // Normalen nach aussen zeigen.
+    if polygon_signed_area(&pts) < 0.0 {
+        pts.reverse();
+    }
+    let tris = triangulate(&pts);
+    let n = pts.len();
+    let mut vertices: Vec<(f64, f64, f64)> = pts.iter().map(|&(y, z)| (x0, y, z)).collect();
+    vertices.extend(pts.iter().map(|&(y, z)| (x1, y, z)));
+
+    let mut faces: Vec<Tri> = Vec::new();
+    for &(a, b, c) in &tris {
+        faces.push((c, b, a));
+        faces.push((a + n, b + n, c + n));
+    }
+    for i in 0..n {
+        let j = (i + 1) % n;
+        faces.push((i, j, j + n));
+        faces.push((i, j + n, i + n));
+    }
+    Mesh { vertices, faces }
+}
+
 /// Fasst mehrere Volumen zu einem Mesh zusammen.
 pub fn merge(meshes: &[Mesh]) -> Mesh {
     let mut vertices = Vec::new();

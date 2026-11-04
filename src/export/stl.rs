@@ -96,6 +96,16 @@ pub fn build_parts(
                 name: "Angel",
                 kind: PartKind::Steel,
             });
+            // Der Angelsteg steht quer vor dem Griff.
+            if let Some(g) = &geo.guard_profile {
+                let dicke = blank.guard_thickness_mm.max(0.5);
+                parts.push(Part {
+                    mesh: crate::mesh::prism_yz(g, -dicke, 0.0),
+                    color: steel,
+                    name: "Angelsteg",
+                    kind: PartKind::Steel,
+                });
+            }
         }
         HandleStyle::PartialTangBolster => {
             // Holzkoerper ueber der Angel, Bastion aus Metall davor
