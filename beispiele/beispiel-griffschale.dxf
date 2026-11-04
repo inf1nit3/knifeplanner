@@ -21,7 +21,7 @@ TABLE
 2
 LAYER
 70
-5
+6
 0
 LAYER
 2
@@ -60,6 +60,16 @@ BOHRUNGEN
 0
 62
 1
+6
+CONTINUOUS
+0
+LAYER
+2
+METALL
+70
+0
+62
+8
 6
 CONTINUOUS
 0
@@ -12637,7 +12647,7 @@ TEXT
 40
 3.000
 1
-Nussbaum (Walnuss) | Schalendicke 8.8 mm | Angel 26.0 x 4.5 mm | Full Tang, 2 Schalen | Zuschnitt Holzleiste 126 x 35 x 20 mm
+Nussbaum (Walnuss) | 2 Schalen à 8.8 mm | Angel 26.0 x 4.5 mm | Full Tang, 2 Schalen | Zuschnitt 126 x 35 x 11 mm, 2 Stück
 0
 TEXT
 8

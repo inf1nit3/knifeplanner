@@ -30,11 +30,3 @@ Ns 48
 d 1.0
 illum 2
 
-newmtl material_4
-Ka 0.30 0.30 0.30
-Kd 0.250 0.250 0.280
-Ks 0.35 0.35 0.35
-Ns 48
-d 1.0
-illum 2
-

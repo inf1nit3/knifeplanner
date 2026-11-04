@@ -1,0 +1,85 @@
+GRIFFPLAN - Full Tang, zwei Griffschalen
+================================================================
+Material:   Nussbaum (Walnuss) - Gut geeignet
+Zuschnitt:  Holzleiste 126 × 35 × 11 mm, 2 Stück (dazwischen 4,5 mm für die Angel aus Stahl)
+Rohling:    Klinge 100 × 26 × 3,0 mm, Angel 110 × 26,0 × 4,5 mm (Durchgehende Angel (Full Tang))
+Griff:      122 mm lang, 31 mm hoch, 22,0 mm dick
+Querschnitt: Oval - Rücken 3,5 mm, Bauch 4,0 mm, Längsgrat 1,5 mm, Verjüngung 2,0 mm
+Profil:     eigenes Ergonomieprofil, Griffhöhe 24 mm, Fingerkehle 2,5 mm, Ballenauflage 3,0 mm
+
+MASSE
+----------------------------------------------------------------
+  grifffaenge_mm                122,3
+  griffhoehe_mm                  31,0
+  schalendicke_mm                 8,8
+  gesamtdicke_mm                 22,0
+  angel_laenge_mm               110,0
+  wandstaerke_mm                  2,0
+  holz_ausserhalb_angel_mm        4,2
+  schalenvolumen_mm3          29476,0
+  holzvolumen_mm3             47462,0
+  holzstuecke                     2,0
+  holz_dicke_mm                   8,8
+  anker_anzahl                    3,0
+  zuschnitt_laenge_mm           126,3
+  zuschnitt_hoehe_mm             35,0
+  zuschnitt_dicke_mm             10,8
+  zuschnitt_stuecke               2,0
+  zuschnitt_holz_dicke_mm        17,5
+  griffgewicht_g                112,3
+  holzgewicht_g                  31,3
+  stahlgewicht_g                 80,9
+
+BOHRPLAN
+----------------------------------------------------------------
+  Position                Abstand Durchm.  Art
+  Vorsteckbolzen vorn        14,3     2,3  Vorsteckbolzen durch die Angel
+      Sichert den vorderen Griffanschluss am Rohling.
+  Vorsteckbolzen Mitte 1     60,6     2,3  Vorsteckbolzen durch die Angel
+      Begrenzt den Abstand zwischen den Bolzen auf unter 75 mm.
+  Vorsteckbolzen hinten     107,0     2,3  Vorsteckbolzen durch die Angel
+      Sichert das Griffende gegen Abplatzen und Ausziehen. Die Angel ist hier noch mindestens so breit wie der Bolzen.
+  Reibniet                   46,8     2,4  Reibniet, halbtief
+      Reibt in einer halbtiefen Nut in der Angel und verhindert, dass sich die Schale im vorderen Griffdrittel verdreht. Die Nut wird in den geraden Teil der Angel gefraest, so breit, dass der Niet mit Spiel darin sitzt.
+  Lanyardloch               116,2     5,0  Lanyardloch quer durch die Dicke
+      Durch das Griffende gebohrt, quer zur Grifflaenge. Die Angel endet 6 mm davor, das Loch liegt vollstaendig im Holz.
+
+MATERIAL
+----------------------------------------------------------------
+  Bewertung:      Gut geeignet
+  Gewicht:       Griff rund 112 g (Holz 31 g, Stahl 81 g, Metall 0 g). Der Griff ist deutlich schwerer als die halbe Klinge - das Messer waucht nach vorn.
+  Klebstoff:      Zwei-Komponenten-Epoxy
+  Befestigung:    Messing-Stift
+  Finish:         Hartwachs-Öl
+  Hinweis:        Der Klassiker. Feine Poren, nimmt Öl gut auf, dunkelt mit der Zeit nach. Spannungsrisiko bei dünnen Schalen nur gering.
+
+  Vorteile:
+    + Eignet sich als Griffschale mit durchgehender Angel.
+
+  Risiken:
+    ! Der Griff reicht 12 mm über die Angel hinaus. Dahinter hält nur noch der Kleber die Schalen zusammen - das ist die Bauart eines Partial Tangs. Ein längerer Rohling wäre robuster, die Angel läuft dann bis zum Griffende.
+
+  Ergonomie:
+    Umfang 105 mm (Ziel 100 mm), empfohlene Griffhoehe 29 mm, Griffriff mindestens 100 mm.
+
+ARBEITSREIHENFOLGE
+----------------------------------------------------------------
+   1. Rohling aufarbeiten: Angel auf 26,0 mm Höhe und 4,5 mm Dicke bringen, Heft sauber entgraten.
+   2. Material auswählen und im Block besorgen - 2 Stück, mindestens 126 mm × 35 mm × 11 mm (mit Zugabe für den Beschnitt).
+   3. Material konditionieren: mehrere Tage bei Raumtemperatur lagern, Krümmung prüfen.
+   4. Griffschalen zuschneiden - Kontur aus dem DXF (Layer SCHALE), 2 Stück à 8,8 mm.
+   5. Die Angel sitzt in der Fuge zwischen den Schalen - die Schalen liegen flach an ihr und werden dort verleimt. Eine Tasche wird nicht ausgefräst.
+   6. Bohrungen setzen nach der Bohrplan-Tabelle, Vorsteckbohrungen mit Ø 2,3 mm, Reibnieten mit Ø 2,4 mm halbtief.
+   7. Kanten abrunden: umlaufend etwa 0,8 mm, danach die Vorderkante anschrägen.
+   8. Leimfugen vorbereiten: an der Angel und im Holz entfetten, Passprobe ohne Klebstoff.
+   9. Kleben und montieren: Zwei-Komponenten-Epoxy verwenden, Schalen anpressen, Vorsteckbolzen von einer Seite einschlagen.
+  10. Endkontrolle: Griff auf Leichtgängigkeit prüfen, Spiel an den Bolzen testen, Kanten nachschleifen.
+  11. Finish: Hartwachs-Öl auftragen, zwischen den Ölgängen 24 Stunden trocknen lassen.
+
+HINWEISE ZUR KONSTRUKTION
+----------------------------------------------------------------
+  - Full Tang: die Angel läuft durch den gesamten Griff. Beide Griffschalen sind spiegelbildlich, die Bohrungen für die Vorsteckbolzen gehen durch die Angel. Die Angel sitzt in der Fuge zwischen den Schalen - die Schalen liegen flach an ihr, eine Tasche wird nicht ausgefräst.
+
+WARNUNGEN
+----------------------------------------------------------------
+  ! Der Griff reicht 12 mm über die Angel hinaus. Dahinter hält nur noch der Kleber die Schalen zusammen - das ist die Bauart eines Partial Tangs. Ein längerer Rohling wäre robuster, die Angel läuft dann bis zum Griffende.

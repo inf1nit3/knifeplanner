@@ -16,7 +16,7 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 6 0 R >>
 endobj
 6 0 obj
-<< /Length 2362 >>
+<< /Length 2411 >>
 stream
 q
 0.000 0.000 0.000 RG
@@ -53,11 +53,11 @@ BT /F1 9.50 Tf 1 0 0 1 311.81 512.15 Tm (31,0 mm) Tj ET
 BT /F1 9.50 Tf 1 0 0 1 42.52 492.31 Tm (Gesamtdicke) Tj ET
 BT /F1 9.50 Tf 1 0 0 1 311.81 492.31 Tm (22,0 mm) Tj ET
 0.100 0.100 0.100 rg
-BT /F1 9.50 Tf 1 0 0 1 42.52 472.46 Tm (Schalendicke) Tj ET
-BT /F1 9.50 Tf 1 0 0 1 311.81 472.46 Tm (8,8 mm) Tj ET
+BT /F1 9.50 Tf 1 0 0 1 42.52 472.46 Tm (Holz) Tj ET
+BT /F1 9.50 Tf 1 0 0 1 311.81 472.46 Tm (2 Schalen à 8,8 mm) Tj ET
 0.100 0.100 0.100 rg
 BT /F1 9.50 Tf 1 0 0 1 42.52 452.62 Tm (Zuschnitt Holz) Tj ET
-BT /F1 9.50 Tf 1 0 0 1 311.81 452.62 Tm (126 × 35 × 20 mm) Tj ET
+BT /F1 9.50 Tf 1 0 0 1 311.81 452.62 Tm (126 × 35 × 11 mm, 2 Stück \(dazwischen 4,5 mm für die Angel\)) Tj ET
 0.000 0.000 0.000 rg
 BT /F2 12.00 Tf 1 0 0 1 42.52 396.28 Tm (Materialbewertung) Tj ET
 BT /F1 9.50 Tf 1 0 0 1 42.52 364.75 Tm (Bewertung: Gut geeignet \(72/100\)) Tj ET
@@ -109,7 +109,7 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 10 0 R >>
 endobj
 10 0 obj
-<< /Length 3095 >>
+<< /Length 3094 >>
 stream
 q
 0.000 0.000 0.000 RG
@@ -121,14 +121,14 @@ BT /F2 9.50 Tf 1 0 0 1 42.52 724.75 Tm (1.) Tj ET
 BT /F1 9.50 Tf 1 0 0 1 70.87 724.75 Tm (Rohling aufarbeiten: Angel auf 26,0 mm Höhe und 4,5 mm Dicke bringen, Heft sauber entgraten.) Tj ET
 0.100 0.100 0.100 rg
 BT /F2 9.50 Tf 1 0 0 1 42.52 699.24 Tm (2.) Tj ET
-BT /F1 9.50 Tf 1 0 0 1 70.87 699.24 Tm (Material auswählen und im Block besorgen - mindestens 132 mm × 39 mm × 10,8 mm, inklusive 2 mm für den) Tj ET
-BT /F1 9.50 Tf 1 0 0 1 70.87 682.23 Tm (Beschnitt.) Tj ET
+BT /F1 9.50 Tf 1 0 0 1 70.87 699.24 Tm (Material auswählen und im Block besorgen - 2 Stück, mindestens 126 mm × 35 mm × 11 mm \(mit Zugabe für) Tj ET
+BT /F1 9.50 Tf 1 0 0 1 70.87 682.23 Tm (den Beschnitt\).) Tj ET
 0.100 0.100 0.100 rg
 BT /F2 9.50 Tf 1 0 0 1 42.52 656.72 Tm (3.) Tj ET
 BT /F1 9.50 Tf 1 0 0 1 70.87 656.72 Tm (Material konditionieren: mehrere Tage bei Raumtemperatur lagern, Krümmung prüfen.) Tj ET
 0.100 0.100 0.100 rg
 BT /F2 9.50 Tf 1 0 0 1 42.52 631.20 Tm (4.) Tj ET
-BT /F1 9.50 Tf 1 0 0 1 70.87 631.20 Tm (Griffschale\(n\) zuschneiden - Kontur aus dem DXF \(Layer SCHALE\), Schalendicke 8,8 mm.) Tj ET
+BT /F1 9.50 Tf 1 0 0 1 70.87 631.20 Tm (Griffschalen zuschneiden - Kontur aus dem DXF \(Layer SCHALE\), 2 Stück à 8,8 mm.) Tj ET
 0.100 0.100 0.100 rg
 BT /F2 9.50 Tf 1 0 0 1 42.52 605.69 Tm (5.) Tj ET
 BT /F1 9.50 Tf 1 0 0 1 70.87 605.69 Tm (Die Angel sitzt in der Fuge zwischen den Schalen - die Schalen liegen flach an ihr und werden dort verleimt.) Tj ET
@@ -170,12 +170,12 @@ xref
 0000000230 00000 n 
 0000000332 00000 n 
 0000000474 00000 n 
-0000002888 00000 n 
-0000003030 00000 n 
-0000004803 00000 n 
-0000004946 00000 n 
+0000002937 00000 n 
+0000003079 00000 n 
+0000004852 00000 n 
+0000004995 00000 n 
 trailer
 << /Size 11 /Root 1 0 R >>
 startxref
-8094
+8142
 %%EOF

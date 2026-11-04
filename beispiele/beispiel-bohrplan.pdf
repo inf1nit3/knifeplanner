@@ -16,7 +16,7 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 6 0 R >>
 endobj
 6 0 obj
-<< /Length 17219 >>
+<< /Length 17218 >>
 stream
 q
 0.000 0.000 0.000 RG
@@ -24,7 +24,7 @@ q
 0.000 0.000 0.000 rg
 BT /F2 15.00 Tf 1 0 0 1 42.52 775.98 Tm (Bohrplan Griff) Tj ET
 BT /F1 9.00 Tf 1 0 0 1 42.52 762.09 Tm (Full Tang, zwei Griffschalen - Nussbaum \(Walnuss\)) Tj ET
-BT /F1 8.00 Tf 1 0 0 1 42.52 748.91 Tm (Angel 26,0 × 4,5 mm, Länge 110,0 mm | Schalendicke 8,8 mm | Griff 122 × 31 mm) Tj ET
+BT /F1 8.00 Tf 1 0 0 1 42.52 748.91 Tm (Angel 26,0 × 4,5 mm, Länge 110,0 mm | 2 Schalen à 8,8 mm | Griff 122 × 31 mm) Tj ET
 0.550 0.550 0.550 RG
 0.200 w
 [2.00 1.50] 0 d
@@ -839,5 +839,5 @@ xref
 trailer
 << /Size 7 /Root 1 0 R >>
 startxref
-17734
+17733
 %%EOF

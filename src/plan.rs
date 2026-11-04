@@ -906,12 +906,12 @@ pub fn build_bauplan_pdf_mit(
     y += 12.0;
     let holz_row = if z.stuecke == 2 {
         format!(
-            "{} Schalen à {} mm",
+            "{} Schalen à {}",
             z.stuecke,
             de_mm(g.scale_thickness_mm, 1)
         )
     } else {
-        format!("{} Block, {} mm", z.stuecke, de_mm(g.total_thickness_mm, 1))
+        format!("{} Block, {}", z.stuecke, de_mm(g.total_thickness_mm, 1))
     };
     let rows = vec![
         ("Klingenlänge", de_mm(b.blade_length_mm, 1)),

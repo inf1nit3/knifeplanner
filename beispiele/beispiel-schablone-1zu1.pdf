@@ -16,7 +16,7 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents 6 0 R >>
 endobj
 6 0 obj
-<< /Length 29699 >>
+<< /Length 29733 >>
 stream
 q
 0.000 0.000 0.000 RG
@@ -27,7 +27,7 @@ BT /F1 9.00 Tf 1 0 0 1 42.52 767.76 Tm (Full Tang, zwei Griffschalen - Nussbaum 
 0.500 0.100 0.100 rg
 BT /F1 8.50 Tf 1 0 0 1 42.52 751.25 Tm (In 100 % drucken. Die 100-mm-Linie muss nach dem Ausdruck genau 100 mm lang sein.) Tj ET
 0.100 0.100 0.100 rg
-BT /F1 8.50 Tf 1 0 0 1 42.52 734.24 Tm (Zuschnitt: Holzleiste 126 × 35 × 20 mm) Tj ET
+BT /F1 8.50 Tf 1 0 0 1 42.52 734.24 Tm (Zuschnitt: 126 × 35 × 11 mm, 2 Stück \(dazwischen 4,5 mm für die Angel\)) Tj ET
 0.000 0.000 0.000 RG
 0.500 w
 [] 0 d
@@ -1486,5 +1486,5 @@ xref
 trailer
 << /Size 7 /Root 1 0 R >>
 startxref
-30214
+30248
 %%EOF
